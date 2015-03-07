@@ -1,0 +1,57 @@
+<?xml version="1.1" ?>
+<settings>
+    <global>
+        <aby>
+            <1>Haste II</1>
+            <2>Protect V</2>
+            <3>Shell V</3>
+            <4>Phalanx II</4>
+        </aby>
+        <abyself>
+            <1>Haste II</1>
+            <2>Aquaveil</2>
+            <3>Protect V</3>
+            <4>Shell V</4>
+            <5>Phalanx</5>
+            <6>Composure</6>
+        </abyself>
+        <mage>
+            <1>Haste II</1>
+            <2>Refresh II</2>
+            <3>Protect V</3>
+            <4>Shell V</4>
+            <5>Phalanx II</5>
+        </mage>
+        <mage2>
+            <1>Haste II</1>
+            <2>Refresh II</2>
+            <3>Phalanx II</3>
+        </mage2>
+        <mage3>
+            <1>Refresh II</1>
+        </mage3>
+        <melee>
+            <1>Haste II</1>
+            <2>Phalanx II</2>
+            <3>Protect V</3>
+            <4>Shell V</4>
+        </melee>
+        <melee2>
+            <1>Haste II</1>
+            <2>Phalanx II</2>
+        </melee2>
+        <melee3>
+            <1>Haste II</1>
+        </melee3>
+        <self>
+            <1>Haste II</1>
+            <2>Refresh II</2>
+            <3>Aquaveil</3>
+            <4>Protect V</4>
+            <5>Shell V</5>
+            <6>Phalanx</6>
+            <7>Reraise</7>
+            <8>Composure</8>
+        </self>
+    </global>
+</settings>

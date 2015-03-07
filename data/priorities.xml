@@ -1,0 +1,32 @@
+<?xml version="1.1" ?>
+<settings>
+    <global>
+        <jobs>
+            <blm>2</blm>
+            <blu>2</blu>
+            <brd>4</brd>
+            <bst>3</bst>
+            <cor>3</cor>
+            <dnc>3</dnc>
+            <drg>2</drg>
+            <drk>2</drk>
+            <geo>3</geo>
+            <mnk>1</mnk>
+            <nin>1</nin>
+            <pld>1</pld>
+            <pup>2</pup>
+            <rdm>4</rdm>
+            <rng>3</rng>
+            <run>1</run>
+            <sam>2</sam>
+            <sch>2</sch>
+            <smn>3</smn>
+            <thf>2</thf>
+            <war>2</war>
+            <whm>4</whm>
+        </jobs>
+        <players>
+            <lorand>1</lorand>
+        </players>
+    </global>
+</settings>

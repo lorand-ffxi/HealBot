@@ -1,0 +1,31 @@
+<?xml version="1.1" ?>
+<settings>
+    <global>
+        <bad_breath>
+            <1>silence</1>
+            <2>blindness</2>
+            <3>paralysis</3>
+            <4>poison</4>
+        </bad_breath>
+        <black_cloud>
+            <1>blindness</1>
+        </black_cloud>
+        <hane_fubuki>
+            <1>poison</1>
+        </hane_fubuki>
+        <poison_breath>
+            <1>poison</1>
+        </poison_breath>
+        <tsujikaze>
+            <1>silence</1>
+            <2>Defense Down</2>
+            <3>Magic Def. Down</3>
+        </tsujikaze>
+        <wings_of_agony>
+            <1>sleep</1>
+        </wings_of_agony>
+        <wings_of_woe>
+            <1>silence</1>
+        </wings_of_woe>
+    </global>
+</settings>
