@@ -259,7 +259,7 @@ function atc(c, msg)
 		msg = c
 		c = 0
 	end
-	windower.add_to_chat(c, '[healBot]'..msg)
+	windower.add_to_chat(c, '[HealBot]'..msg)
 end
 
 function atcd(c, msg)
@@ -271,7 +271,7 @@ end
 --]]
 function echo(msg)
 	if (msg ~= nil) then
-		windower.send_command('echo [healBot]'..msg)
+		windower.send_command('echo [HealBot]'..msg)
 	end
 end
 

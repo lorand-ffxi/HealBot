@@ -1,7 +1,7 @@
-_addon.name = 'healBot'
+_addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.6.3'
+_addon.version = '2.6.31'
 _addon.lastUpdate = '2015.03.06'
 
 require('luau')
@@ -14,13 +14,13 @@ packets = require('packets')
 files = require('files')
 info = loadstring(files.read('../info/info_share.lua'))()	--Load addons\info\info_share.lua for functions to print information accessed directly from windower
 
-require 'healBot_statics'
-require 'healBot_utils'
-require 'healBot_buffHandling'
-require 'healBot_cureHandling'
-require 'healBot_followHandling'
-require 'healBot_packetHandling'
-require 'healBot_actionHandling'
+require 'HealBot_statics'
+require 'HealBot_utils'
+require 'HealBot_buffHandling'
+require 'HealBot_cureHandling'
+require 'HealBot_followHandling'
+require 'HealBot_packetHandling'
+require 'HealBot_actionHandling'
 
 configs_loaded = false
 load_configs()
@@ -282,11 +282,11 @@ function getMonitoredPlayers()
 end
 
 function printInfo()
-	windower.add_to_chat(0, 'healBot comands: (to be implemented)')
+	windower.add_to_chat(0, 'HealBot comands: (to be implemented)')
 end
 
 function printStatus()
-	windower.add_to_chat(0, 'healBot: '..(active and 'active' or 'off'))
+	windower.add_to_chat(0, 'HealBot: '..(active and 'active' or 'off'))
 end
 
 -----------------------------------------------------------------------------------------------------------
