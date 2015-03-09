@@ -300,6 +300,14 @@ end
 --			Initialization Functions
 --==============================================================================
 
+function import(path)
+	local fcontents = files.read(path)
+	if (fcontents ~= nil) then
+		return loadstring(fcontents)()
+	end
+	return nil
+end
+
 function load_configs()
 	aliases = config.load('..\\shortcuts\\data\\aliases.xml')
 	mabil_debuffs = config.load('data/mabil_debuffs.xml')

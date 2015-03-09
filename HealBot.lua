@@ -1,18 +1,17 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.6.31'
-_addon.lastUpdate = '2015.03.06'
+_addon.version = '2.6.4'
+_addon.lastUpdate = '2015.03.09'
 
-require('luau')
-rarr = string.char(129,168)
-sparr = ' '..rarr..' '
+_libs = _libs or {}
+_libs.luau = _libs.luau or require('luau')
+
 res = require('resources')
 config = require('config')
 texts = require('texts')
 packets = require('packets')
 files = require('files')
-info = loadstring(files.read('../info/info_share.lua'))()	--Load addons\info\info_share.lua for functions to print information accessed directly from windower
 
 require 'HealBot_statics'
 require 'HealBot_utils'
@@ -21,6 +20,8 @@ require 'HealBot_cureHandling'
 require 'HealBot_followHandling'
 require 'HealBot_packetHandling'
 require 'HealBot_actionHandling'
+
+info = import('../info/info_share.lua')	--Load addons\info\info_share.lua for functions to print information accessed directly from windower
 
 configs_loaded = false
 load_configs()

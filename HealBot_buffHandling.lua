@@ -52,7 +52,7 @@ function checkOwnBuffs()
 			end
 		end
 		--Double check the list of what should be active
-		local checklist = buffList[player.name]
+		local checklist = buffList[player.name] or {}
 		local active = S(player.buffs)
 		for bname,binfo in pairs(checklist) do
 			if not (active:contains(binfo.buff.id)) then

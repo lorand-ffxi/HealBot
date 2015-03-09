@@ -13,6 +13,10 @@
         <hane_fubuki>
             <1>poison</1>
         </hane_fubuki>
+        <mandible_massacre>
+            <1>paralysis</1>
+            <2>doom</2>
+        </mandible_massacre>
         <poison_breath>
             <1>poison</1>
         </poison_breath>
