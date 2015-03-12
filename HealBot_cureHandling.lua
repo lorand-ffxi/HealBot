@@ -5,48 +5,18 @@
 --]]
 --==============================================================================
 
-function getPotentialCures()
-	local potentialActions = {}
-	local c = 1
-	local hpTable = getMissingHps()				--Get a table with players' HP info
-	
+function getCureQueue()
+	local cq = ActionQueue.new()
+	local hpTable = getMissingHps()
 	for name,p in pairs(hpTable) do
 		if (p.hpp < 95) then
 			local spell = get_cure_to_cast(p.missing)
-			if (spell ~= nil) and (not isTooFar(name)) then
-				potentialActions[c] = {action=spell,targ_hpp=p.hpp,targetName=name,msg=' ('..p.missing..')'}
-				c = c + 1
+			if (spell ~= nil) then
+				cq:enqueue('cure', spell, name, p.hpp, ' ('..p.missing..')')
 			end
 		end
 	end
-	return (sizeof(potentialActions) > 0) and potentialActions or nil
-end
-
---[[
-	Determines whether or not a Cure spell needs to be cast, and returns a table
-	with information about what to cast.
---]]
-function cureSomeone()
-	local hpTable = getMissingHps()				--Get a table with players' HP info
-	local curee = getMemberWithMostHpMissing(hpTable)	--Choose a target
-	
-	while (curee ~= nil) and (isTooFar(curee.name)) do	--If the player with the most missing HP is too far away
-		hpTable[curee.name] = nil				--Remove them from the table
-		curee = getMemberWithMostHpMissing(hpTable)		--Pick a new target
-	end
-	
-	if (curee ~= nil) then					--If someone needs a Cure
-		local spell = get_cure_to_cast(curee.missing)		--Get the info for the Cure spell to cast
-		if (spell ~= nil) then					--If info was received
-			local action = {}					--Build the action table
-			action.msg = ' ('..curee.missing..')'			--Set the debug message
-			action.targetName = curee.name				--The target is the curee
-			action.targ_hpp = curee.hpp				--The cure target's HP%
-			action.action = spell					--The action is the Cure spell
-			return action						--Return the action table to be executed
-		end
-	end
-	return nil						--Return nil if there's nothing to do
+	return cq:getQueue()
 end
 
 --[[

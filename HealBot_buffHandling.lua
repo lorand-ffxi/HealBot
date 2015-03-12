@@ -52,7 +52,7 @@ function checkOwnBuffs()
 			end
 		end
 		--Double check the list of what should be active
-		local checklist = buffList[player.name] or {}
+		local checklist = buffList[player.name] and buffList[player.name] or {}
 		local active = S(player.buffs)
 		for bname,binfo in pairs(checklist) do
 			if not (active:contains(binfo.buff.id)) then
@@ -75,60 +75,42 @@ end
 --			Monitored Player Buff Checking
 --==============================================================================
 
-function checkBuffs()
-	local potentialActions = {}
-	local c = 1
+function getBuffQueue()
+	local bq = ActionQueue.new()
 	local now = os.clock()
 	for targ, buffs in pairs(buffList) do
-		if not isTooFar(targ) then
-			for buff, info in pairs(buffs) do
-				if (targ == myName) then checkOwnBuff(buff) end
-				local action = info.action
-				if (info.landed == nil) then
-					if (info.attempted == nil) or ((now - info.attempted) >= 3) then
-						if (getRecast(action) == 0) then
-							potentialActions[c] = {['action']=action, ['targetName']=targ, ['buffName']=buff}
-							c = c + 1
-						end
-					end
+		for buff, info in pairs(buffs) do
+			if (targ == myName) then
+				checkOwnBuff(getBuffNameForAction(info.action.en))
+			end
+			local action = info.action
+			if (info.landed == nil) then
+				if (info.attempted == nil) or ((now - info.attempted) >= 3) then
+					bq:enqueue('buff', action, targ, buff, nil)
 				end
 			end
 		end
 	end
-	return (sizeof(potentialActions) > 0) and potentialActions or nil
+	return bq:getQueue()
 end
 
-function getRecast(action)
-	if (action.type == 'JobAbility') then
-		return windower.ffxi.get_ability_recasts()[action.recast_id]
-	else
-		return windower.ffxi.get_spell_recasts()[action.recast_id]
-	end
-end
-
-function checkDebuffs()
-	local potentialActions = {}
-	local c = 1
+function getDebuffQueue()
+	local dbq = ActionQueue.new()
 	local now = os.clock()
 	for targ, debuffs in pairs(debuffList) do
-		if not isTooFar(targ) then
-			for debuff, info in pairs(debuffs) do
-				local removalSpellName = debuff_map[debuff]
-				if removalSpellName ~= nil then
-					if (info.attempted == nil) or ((now - info.attempted) >= 3) then
-						local spell = res.spells:with('en', removalSpellName)
-						if (getRecast(spell) == 0) then
-							potentialActions[c] = {['action']=spell, ['targetName']=targ, ['msg']=' ('..debuff..')', ['debuffName']=debuff}
-							c = c + 1
-						end
-					end
-				else
-					debuffList[targ][debuff] = nil
+		for debuff, info in pairs(debuffs) do
+			local removalSpellName = debuff_map[debuff]
+			if (removalSpellName ~= nil) then
+				if (info.attempted == nil) or ((now - info.attempted) >= 3) then
+					local spell = res.spells:with('en', removalSpellName)
+					dbq:enqueue('buff', spell, targ, debuff, ' ('..debuff..')')
 				end
+			else
+				debuffList[targ][debuff] = nil
 			end
 		end
 	end
-	return (sizeof(potentialActions) > 0) and potentialActions or nil
+	return dbq:getQueue()
 end
 
 --==============================================================================

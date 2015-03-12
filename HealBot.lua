@@ -1,11 +1,12 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.6.4'
-_addon.lastUpdate = '2015.03.09'
+_addon.version = '2.7.0'
+_addon.lastUpdate = '2015.03.12'
 
 _libs = _libs or {}
 _libs.luau = _libs.luau or require('luau')
+_libs.queues = _libs.queues or require('queues')
 
 res = require('resources')
 config = require('config')
@@ -20,6 +21,7 @@ require 'HealBot_cureHandling'
 require 'HealBot_followHandling'
 require 'HealBot_packetHandling'
 require 'HealBot_actionHandling'
+require 'HealBot_queues'
 
 info = import('../info/info_share.lua')	--Load addons\info\info_share.lua for functions to print information accessed directly from windower
 
@@ -88,13 +90,17 @@ windower.register_event('prerender', function()
 			local action = getActionToPerform()
 			if (action ~= nil) then
 				local act = action.action
-				local tname = action.targetName
+				local tname = action.name
 				local msg = action.msg or ''
 				
-				if canCast(getActionFor(act.en)) then			
-					atcd(act.en..sparr..tname..msg)
-					wcmd(act.prefix, act.en, tname)
+				if (action.type == 'buff') and (buffList[tname][action.buff]) then
+					buffList[tname][action.buff].attempted = os.clock()
+				elseif (action.type == 'debuff') then
+					debuffList[tname][action.debuff].attempted = os.clock()
 				end
+				
+				atcd(act.en..sparr..tname..msg)
+				wcmd(act.prefix, act.en, tname)
 			end
 			lastAction = now
 		end
