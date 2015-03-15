@@ -312,7 +312,14 @@ function load_configs()
 	aliases = config.load('..\\shortcuts\\data\\aliases.xml')
 	mabil_debuffs = config.load('data/mabil_debuffs.xml')
 	defaultBuffs = config.load('data/buffLists.xml')
+	
 	priorities = config.load('data/priorities.xml')
+	priorities.players = priorities.players or {}
+	priorities.jobs = priorities.jobs or {}
+	priorities.status_removal = priorities.status_removal or {}
+	priorities.buffs = priorities.buffs or {}
+	priorities.default = priorities.default or 5
+	
 	mobAbils = process_mabil_debuffs()
 	local msg = configs_loaded and 'Rel' or 'L'
 	configs_loaded = true
@@ -332,7 +339,8 @@ end
 function process_mabil_debuffs()
 	local mabils = S{}
 	for abil_raw,debuffs in pairs(mabil_debuffs) do
-		local aname = mabilName(abil_raw)
+		--local aname = mabilName(abil_raw)
+		local aname = abil_raw:gsub('_',' '):capitalize()
 		mabils[aname] = S{}
 		for _,debuff in pairs(debuffs) do
 			mabils[aname]:add(debuff)

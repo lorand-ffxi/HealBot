@@ -56,8 +56,6 @@ cure_potencies = {[1]=87, [2]=199, [3]=438, [4]=816, [5]=1056, [6]=1311}
 tier_of_cure = {['Cure'] = 1, ['Cure II'] = 2, ['Cure III'] = 3, ['Cure IV'] = 4, ['Cure V'] = 5, ['Cure VI'] = 6}
 cure_of_tier = {'Cure','Cure II','Cure III','Cure IV','Cure V','Cure VI'}
 
-buff_priorities = {['composure']=0,['afflatus: solace']=0,['haste']=1,['refresh']=1,['reraise']=2}
-removal_priorities = {['addle']=1,['attack down']=2,['bind']=2,['bio']=2,['blind']=2,['curse']=3,['disease']=2,['doom']=1,['elegy']=1,['paralysis']=1,['petrification']=1,['plague']=2,['poison']=3,['silence']=1,['slow']=1,['weight']=2}
 -----------------------------------------------------------------------------------------------------------
 --[[
 Copyright © 2015, Lorand

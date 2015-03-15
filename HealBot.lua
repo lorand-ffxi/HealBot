@@ -1,7 +1,7 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.7.0'
+_addon.version = '2.7.2'
 _addon.lastUpdate = '2015.03.12'
 
 _libs = _libs or {}
@@ -69,12 +69,25 @@ end)
 windower.register_event('incoming chunk', handle_incoming_chunk)
 windower.register_event('addon command', processCommand)
 
+function assertFollowTargetExistence()
+	if (followTarget == nil) then return end
+	local ft = windower.ffxi.get_mob_by_name(followTarget)
+	if follow and (ft == nil) then
+		followPause = true
+		follow = false
+	elseif followPause and (ft ~= nil) then
+		followPause = nil
+		follow = true
+	end
+end
+
 windower.register_event('prerender', function()
 	local now = os.clock()
 	local moving = isMoving()
 	local acting = isPerformingAction(moving)
 	local player = windower.ffxi.get_player()
 	if (player ~= nil) and S{0,1}:contains(player.status) then	--Assert player is idle or engaged
+		assertFollowTargetExistence()
 		if follow and ((now - lastFollowCheck) > followDelay) then
 			if not needToMove(followTarget) then
 				windower.ffxi.run(false)
@@ -180,6 +193,14 @@ function isPerformingAction(moving)
 		status = 'is disabled'
 	end
 	
+	local player = windower.ffxi.get_player()
+	if (player ~= nil) then
+		local mpp = player.vitals.mpp
+		if (mpp <= 10) then
+			status = status..' | \\cs(255,0,0)LOW MP\\cr'
+		end
+	end
+	
 	actionInfo:text(myName..status)
 	actionInfo:visible(modes.showActionInfo)
 	return acting
@@ -197,28 +218,22 @@ function getPlayerPriority(tname)
 	if (tname == myName) then
 		return 1
 	elseif trusts:contains(tname) then
-		return 5
+		return priorities.default + 2
 	end
 	local pmInfo = partyMemberInfo[tname]
-	local jobprio = 3
-	if (pmInfo ~= nil) and (pmInfo.job ~= nil) then
-		jobprio = priorities.jobs[pmInfo.job:lower()] or 3
-	end
-	local playerprio = 3
-	if (priorities.players ~= nil) then
-		playerprio = priorities.players[tname:lower()] or 3
-	end
+	local jobprio = (pmInfo ~= nil) and priorities.jobs[pmInfo.job:lower()] or priorities.default
+	local playerprio = priorities.players[tname:lower()] or priorities.default
 	return math.min(jobprio, playerprio)
 end
 
 function getBuffPriority(buff_name)
-	local bn = buff_name or ''
-	return buff_priorities[bn:lower()] or 3
+	local bnamef = buff_name:gsub(' ','_'):lower()
+	return priorities.buffs[bnamef] or priorities.default
 end
 
 function getRemovalPriority(ailment)
-	local an = ailment or ''
-	return removal_priorities[an:lower()] or 3
+	local ailmentf = ailment:gsub(' ','_'):lower()
+	return priorities.status_removal[ailmentf] or priorities.default
 end
 
 function getActionFor(actionName)

@@ -21,16 +21,22 @@ function handle_incoming_chunk(id, data)
 		elseif id == 0x29 then
 			processMessage(ai, actor, monitoring)
 		end
-	elseif id == 0x0DD then			--Party member update
+	elseif (id == 0x0DD) then			--Party member update
 		local parsed = packets.parse('incoming', data)
 		local pmName = parsed.Name
 		local pmJobId = parsed['Main job']
 		local pmSubJobId = parsed['Sub job']
-		if (partyMemberInfo[pmName] == nil) then
-			partyMemberInfo[pmName] = {}
-		end
+		partyMemberInfo[pmName] = partyMemberInfo[pmName] or {}
 		partyMemberInfo[pmName].job = res.jobs[pmJobId].ens
 		partyMemberInfo[pmName].subjob = res.jobs[pmSubJobId].ens
+		--atc('Caught party member update packet for '..parsed.Name..' | '..parsed.ID)
+	elseif (id == 0x0DF) then
+		local player = windower.ffxi.get_player()
+		local parsed = packets.parse('incoming', data)
+		if (player ~= nil) and (player.id ~= parsed.ID) then
+			local person = windower.ffxi.get_mob_by_id(parsed.ID)
+			--atc('Caught char update packet for '..person.name)
+		end
 	end
 end
 

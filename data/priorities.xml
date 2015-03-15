@@ -1,6 +1,14 @@
 <?xml version="1.1" ?>
 <settings>
     <global>
+        <buffs>
+            <afflatus_solace>0</afflatus_solace>
+            <composure>0</composure>
+            <haste>1</haste>
+            <refresh>1</refresh>
+            <reraise>2</reraise>
+        </buffs>
+        <default>5</default>
         <jobs>
             <blm>2</blm>
             <blu>2</blu>
@@ -28,5 +36,23 @@
         <players>
             <lorand>1</lorand>
         </players>
+        <status_removal>
+            <addle>2</addle>
+            <attack_down>3</attack_down>
+            <bind>4</bind>
+            <bio>3</bio>
+            <blind>4</blind>
+            <curse>2</curse>
+            <disease>4</disease>
+            <doom>0</doom>
+            <elegy>1</elegy>
+            <paralysis>1</paralysis>
+            <petrification>0</petrification>
+            <plague>4</plague>
+            <poison>4</poison>
+            <silence>1</silence>
+            <slow>1</slow>
+            <weight>4</weight>
+        </status_removal>
     </global>
 </settings>
