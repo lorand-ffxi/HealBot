@@ -26,6 +26,7 @@ function processCommand(command,...)
 		local cmd = args[1] and args[1]:lower() or (assist and 'off' or 'resume')
 		if S{'off','end','false','pause'}:contains(cmd) then
 			assist = false
+			atc('Assist is now off.')
 		elseif S{'resume'}:contains(cmd) then
 			if (assistTarget ~= nil) then
 				assist = true

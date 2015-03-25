@@ -101,9 +101,19 @@ end
 --[[
 	Builds an action queue for offensive actions.  Returns the action deemed most important at the time.
 	
-	UNIMPLEMENTED
+	TODO: Expand
 --]]
 function getOffensiveAction()
+	local target = windower.ffxi.get_mob_by_target()
+	if (target ~= nil) then
+		enemyInfo = enemyInfo or {}
+		if (target.id ~= enemyInfo.id) then
+			enemyInfo = {lastCast={}}
+			enemyInfo.id = target.id
+			enemyInfo.lastCast['Dia III'] = os.clock()
+			return {action=getActionFor('Dia III'),name='<t>'}
+		end
+	end
 	return nil
 end
 
