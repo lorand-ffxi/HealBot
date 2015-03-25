@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.7.2'
-_addon.lastUpdate = '2015.03.12'
+_addon.version = '2.8.0'
+_addon.lastUpdate = '2015.03.25'
 
 _libs = _libs or {}
 _libs.luau = _libs.luau or require('luau')
@@ -16,6 +16,7 @@ files = require('files')
 
 require 'HealBot_statics'
 require 'HealBot_utils'
+require 'HealBot_Assert'
 require 'HealBot_buffHandling'
 require 'HealBot_cureHandling'
 require 'HealBot_followHandling'
@@ -23,24 +24,19 @@ require 'HealBot_packetHandling'
 require 'HealBot_actionHandling'
 require 'HealBot_queues'
 
-info = import('../info/info_share.lua')	--Load addons\info\info_share.lua for functions to print information accessed directly from windower
-
-configs_loaded = false
-load_configs()
-
-zone_enter = os.clock()-25
-zone_wait = false
-
-trusts = populateTrustList()
-ignoreList = S{}
-extraWatchList = S{}
-
-local moveInfo = texts.new({pos={x=0,y=18}})
-local actionInfo = texts.new({pos={x=0,y=0}})
-actionQueue = texts.new({pos={x=-125,y=300},text={font='Arial',size=10},flags={right=true}})
-local montoredBox = texts.new({pos={x=-150,y=600},text={font='Arial',size=10},flags={right=true}})
+info = import('../info/info_share.lua')	--Load addons\info\info_share.lua for functions to print info from windower
 
 windower.register_event('load', function()
+	configs_loaded = false
+	load_configs()
+	
+	zone_enter = os.clock()-25
+	zone_wait = false
+	
+	trusts = populateTrustList()
+	ignoreList = S{}
+	extraWatchList = S{}
+	
 	lastAction = os.clock()
 	lastFollowCheck = os.clock()
 	actionStart = os.clock()
@@ -56,6 +52,7 @@ windower.register_event('load', function()
 	minCureTier = 3
 	lastActingState = false
 	partyMemberInfo = {}
+	assist = false
 end)
 
 windower.register_event('logout', function()
@@ -69,53 +66,66 @@ end)
 windower.register_event('incoming chunk', handle_incoming_chunk)
 windower.register_event('addon command', processCommand)
 
-function assertFollowTargetExistence()
-	if (followTarget == nil) then return end
-	local ft = windower.ffxi.get_mob_by_name(followTarget)
-	if follow and (ft == nil) then
-		followPause = true
-		follow = false
-	elseif followPause and (ft ~= nil) then
-		followPause = nil
-		follow = true
-	end
-end
-
+--[[
+	Executes before each frame is rendered for display.
+	Acts as the run() method of a threaded application.
+--]]
 windower.register_event('prerender', function()
-	local now = os.clock()
-	local moving = isMoving()
-	local acting = isPerformingAction(moving)
-	local player = windower.ffxi.get_player()
+	local now = os.clock()						--Record the current time
+	local moving = isMoving()					--Determine player's movement status
+	local acting = isPerformingAction(moving)			--Determine player's action status
+	local player = windower.ffxi.get_player()			--Retrieve player info from windower
 	if (player ~= nil) and S{0,1}:contains(player.status) then	--Assert player is idle or engaged
-		assertFollowTargetExistence()
-		if follow and ((now - lastFollowCheck) > followDelay) then
+		assertFollowTargetExistence()		--Assert follow target is valid to prevent autorun problems
+		if follow and ((now - lastFollowCheck) > followDelay) then	--If following & enough time has passed
 			if not needToMove(followTarget) then
-				windower.ffxi.run(false)
+				windower.ffxi.run(false)		--Stop if movement isn't necessary
 			else
-				moveTowards(followTarget)
-				moving = true
+				moveTowards(followTarget)		--Move towards follow target
+				moving = true				--Prevent an action if player needs to move
 			end
-			lastFollowCheck = now
+			lastFollowCheck = now				--Refresh stored movement check time
 		end
 		
-		local busy = moving or acting
-		if active and (not busy) and ((now - lastAction) > actionDelay) then
-			local action = getActionToPerform()
-			if (action ~= nil) then
+		local busy = moving or acting				--Player is busy if moving or acting
+		if active and (not busy) and ((now - lastAction) > actionDelay) then	--If acting is possible
+			local action = getActionToPerform()		--Pick an action to perform
+			if (action ~= nil) then				--If there's a defensive action to perform
 				local act = action.action
 				local tname = action.name
 				local msg = action.msg or ''
 				
+				--Record attempt time for buffs/debuffs
 				if (action.type == 'buff') and (buffList[tname][action.buff]) then
 					buffList[tname][action.buff].attempted = os.clock()
 				elseif (action.type == 'debuff') then
 					debuffList[tname][action.debuff].attempted = os.clock()
 				end
 				
-				atcd(act.en..sparr..tname..msg)
-				wcmd(act.prefix, act.en, tname)
+				atcd(act.en..sparr..tname..msg)			--Debug message
+				wcmd(act.prefix, act.en, tname)			--Send command to windower
+			else						--Otherwise, there may be an offensive action
+				if assist and (assistTarget ~= nil) then
+					local atarg = windower.ffxi.get_mob_by_name(assistTarget)
+					if (atarg ~= nil) then
+						if (player.target_index == atarg.target_index) then	--Same targets
+							local action = getOffensiveAction()
+							if (action ~= nil) then
+								--do it
+							end
+						else
+							local at_engaged = (atarg.status == 1)
+							local self_engaged = (player.status == 1)
+							if at_engaged and (not self_engaged) then	--Should assist
+								assistAttack = assistAttack and assistAttack or false
+								local attcmd = assistAttack and ';wait 0.8;input /attack on' or ''
+								windower.send_command('input /as '..assistTarget..attcmd)
+							end
+						end
+					end
+				end
 			end
-			lastAction = now
+			lastAction = now				--Refresh stored action check time
 		end
 	end
 end)
@@ -135,130 +145,6 @@ function activate()
 	checkOwnBuffs()
 end
 
-function isMoving()
-	if (getPosition() == nil) then
-		moveInfo:hide()
-		return true
-	end
-	lastPos = lastPos and lastPos or getPosition()
-	posArrival = posArrival and posArrival or os.clock()
-	local currentPos = getPosition()
-	local now = os.clock()
-	local moving = true
-	local timeAtPos = math.floor((now - posArrival)*10)/10
-	if (lastPos:equals(currentPos)) then
-		moving = (timeAtPos < 0.5)
-	else
-		lastPos = currentPos
-		posArrival = now
-	end
-	if math.floor(timeAtPos) == timeAtPos then
-		timeAtPos = timeAtPos..'.0'
-	end
-	moveInfo:text('Time @ '..currentPos:toString()..': '..timeAtPos..'s')
-	moveInfo:visible(modes.showMoveInfo)
-	return moving
-end
-
-function isPerformingAction(moving)
-	if (os.clock() - actionStart) > 8 then
-		--Precaution in case an action completion isn't registered for a long time
-		actionEnd = os.clock()
-	end
-	
-	local acting = (actionEnd < actionStart)
-	local status = acting and 'performing an action' or (moving and 'moving' or 'idle')
-	status = ' is '..status
-	
-	if (lastActingState ~= acting) then	--If the current acting state is different from the last one
-		if lastActingState then			--If an action was being performed
-			actionDelay = 2.75			--Set a longer delay
-			lastAction = os.clock()			--The delay will be from this time
-		else					--If no action was being performed
-			actionDelay = 0.1			--Set a short delay
-		end
-		lastActingState = acting		--Refresh the last acting state
-	end
-	
-	if (os.clock() - zone_enter) < 25 then
-		acting = true
-		status = ' zoned recently'
-		zone_wait = true
-	elseif zone_wait then
-		zone_wait = false
-		resetBuffTimers('ALL', S{'Protect V','Shell V'})
-		checkOwnBuffs()
-	elseif (buffActive('Sleep', 'Petrification', 'Charm', 'Terror', 'Lullaby', 'Stun', 'Silence', 'Mute') ~= nil) then
-		acting = true
-		status = 'is disabled'
-	end
-	
-	local player = windower.ffxi.get_player()
-	if (player ~= nil) then
-		local mpp = player.vitals.mpp
-		if (mpp <= 10) then
-			status = status..' | \\cs(255,0,0)LOW MP\\cr'
-		end
-	end
-	
-	actionInfo:text(myName..status)
-	actionInfo:visible(modes.showActionInfo)
-	return acting
-end
-
-function isTooFar(name)
-	local target = windower.ffxi.get_mob_by_name(name)
-	if target ~= nil then
-		return math.sqrt(target.distance) > 20.8
-	end
-	return true
-end
-
-function getPlayerPriority(tname)
-	if (tname == myName) then
-		return 1
-	elseif trusts:contains(tname) then
-		return priorities.default + 2
-	end
-	local pmInfo = partyMemberInfo[tname]
-	local jobprio = (pmInfo ~= nil) and priorities.jobs[pmInfo.job:lower()] or priorities.default
-	local playerprio = priorities.players[tname:lower()] or priorities.default
-	return math.min(jobprio, playerprio)
-end
-
-function getBuffPriority(buff_name)
-	local bnamef = buff_name:gsub(' ','_'):lower()
-	return priorities.buffs[bnamef] or priorities.default
-end
-
-function getRemovalPriority(ailment)
-	local ailmentf = ailment:gsub(' ','_'):lower()
-	return priorities.status_removal[ailmentf] or priorities.default
-end
-
-function getActionFor(actionName)
-	local spell = res.spells:with('en', actionName)
-	local abil = res.job_abilities:with('en', actionName)
-	if (spell ~= nil) then
-		return spell
-	elseif (abil ~= nil) then
-		return abil
-	end
-	return nil
-end
-
-function canCast(spell)
-	if spell.prefix == '/magic' then
-		local player = windower.ffxi.get_player()
-		if (player == nil) or (spell == nil) then return false end
-		local mainCanCast = (spell.levels[player.main_job_id] ~= nil) and (spell.levels[player.main_job_id] <= player.main_job_level)
-		local subCanCast = (spell.levels[player.sub_job_id] ~= nil) and (spell.levels[player.sub_job_id] <= player.sub_job_level)
-		local spellAvailable = windower.ffxi.get_spells()[spell.id]
-		return spellAvailable and (mainCanCast or subCanCast)
-	end
-	return true
-end
-
 function addPlayer(list, player)
 	if (player ~= nil) and (not (ignoreList:contains(player.name))) then
 		if (modes.ignoreTrusts and trusts:contains(player.name) and (not extraWatchList:contains(player.name))) then return end
@@ -272,6 +158,8 @@ function addPlayer(list, player)
 		end
 	end
 end
+
+local montoredBox = texts.new({pos={x=-150,y=600},text={font='Arial',size=10},flags={right=true}})
 
 function getMonitoredPlayers()
 	local pt = windower.ffxi.get_party()
@@ -301,14 +189,6 @@ function getMonitoredPlayers()
 	montoredBox:text(getPrintable(targets, true))
 	montoredBox:visible(modes.showMonitored)
 	return targets
-end
-
-function printInfo()
-	windower.add_to_chat(0, 'HealBot comands: (to be implemented)')
-end
-
-function printStatus()
-	windower.add_to_chat(0, 'HealBot: '..(active and 'active' or 'off'))
 end
 
 -----------------------------------------------------------------------------------------------------------
