@@ -65,7 +65,7 @@ end
 function checkOwnBuff(buffName)
 	local player = windower.ffxi.get_player()
 	local activeBuffIds = S(player.buffs)
-	local buff = res.buffs:with('en', buffName)
+	local buff = res.buffs:with('en', buffName) or {}
 	if (activeBuffIds:contains(buff.id)) then
 		registerBuff(player.name, buffName, true)
 	end

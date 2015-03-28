@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.8.1'
-_addon.lastUpdate = '2015.03.25'
+_addon.version = '2.8.2'
+_addon.lastUpdate = '2015.03.27'
 
 _libs = _libs or {}
 _libs.luau = _libs.luau or require('luau')
@@ -96,6 +96,7 @@ windower.register_event('prerender', function()
 				local msg = action.msg or ''
 				
 				--Record attempt time for buffs/debuffs
+				buffList[tname] = buffList[tname] or {}
 				if (action.type == 'buff') and (buffList[tname][action.buff]) then
 					buffList[tname][action.buff].attempted = os.clock()
 				elseif (action.type == 'debuff') then
