@@ -52,7 +52,7 @@ function getActionToPerform()
 	end
 	
 	txts.actionQueue:text(getPrintable(queue))
-	txts.actionQueue:visible(modes.showActionQueue)
+	txts.actionQueue:visible(settings.textBoxes.actionQueue.visible)
 	
 	if (action.cure ~= nil) then
 		if (action.debuff ~= nil) and (action.debuff.prio < action.cure.prio) then

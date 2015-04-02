@@ -149,25 +149,25 @@ function processCommand(command,...)
 		if posCommand('moveInfo', args) then
 			refresh_textBoxes()
 		else
-			toggleMode('showMoveInfo', args[1], 'Movement info', 'MoveInfo')
+			toggleVisible('moveInfo', args[1])
 		end
 	elseif command == 'actioninfo' then
 		if posCommand('actionInfo', args) then
 			refresh_textBoxes()
 		else
-			toggleMode('showActionInfo', args[1], 'Action info display', 'ActionInfo')
+			toggleVisible('actionInfo', args[1])
 		end
 	elseif S{'showq','showqueue','queue'}:contains(command) then
 		if posCommand('actionQueue', args) then
 			refresh_textBoxes()
 		else
-			toggleMode('showActionQueue', args[1], 'Action queue', 'ShowQueue')
+			toggleVisible('actionQueue', args[1])
 		end
 	elseif S{'monitored','showmonitored'}:contains(command) then
 		if posCommand('montoredBox', args) then
 			refresh_textBoxes()
 		else
-			toggleMode('showMonitored', args[1], 'Monitored players list', 'ShowMonitored')
+			toggleVisible('montoredBox', args[1])
 		end
 	elseif S{'help','--help'}:contains(command) then
 		help_text()
@@ -206,6 +206,17 @@ function posCommand(boxName, args)
 		settings.textBoxes[boxName].y = y
 	end
 	return true
+end
+
+function toggleVisible(boxName, cmd)
+	cmd = cmd and cmd:lower() or (settings.textBoxes[boxName].visible and 'off' or 'on')
+	if (cmd == 'on') then
+		settings.textBoxes[boxName].visible = true
+	elseif (cmd == 'off') then
+		settings.textBoxes[boxName].visible = false
+	else
+		atc(123,'Invalid argument for changing text box settings: '..cmd)
+	end
 end
 
 function toggleMode(mode, cmd, msg, msgErr)
@@ -446,10 +457,10 @@ end
 function load_configs()
 	local defaults = {}
 	defaults.textBoxes = {
-		actionQueue={x=-125,y=300,font='Arial',size=10},
-		moveInfo={x=0,y=18},
-		actionInfo={x=0,y=0},
-		montoredBox={x=-150,y=600,font='Arial',size=10}
+		actionQueue={x=-125,y=300,font='Arial',size=10,visible=true},
+		moveInfo={x=0,y=18,visible=false},
+		actionInfo={x=0,y=0,visible=true},
+		montoredBox={x=-150,y=600,font='Arial',size=10,visible=true}
 	}
 	settings = config.load('data/settings.xml', defaults)
 	refresh_textBoxes()

@@ -1,7 +1,7 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.9.0'
+_addon.version = '2.9.1'
 _addon.lastUpdate = '2015.04.02'
 
 _libs = _libs or {}
@@ -46,7 +46,7 @@ windower.register_event('load', function()
 	local player = windower.ffxi.get_player()
 	myName = player and player.name or 'Player'
 	
-	modes = {['showPacketInfo']=false,['showMoveInfo']=false,['showActionInfo']=true,['showActionQueue']=true,['showMonitored']=true,['ignoreTrusts']=true}
+	modes = {['showPacketInfo']=false,['ignoreTrusts']=true}
 	debugMode = false
 	active = false
 	actionDelay = 0.08
@@ -195,7 +195,7 @@ function getMonitoredPlayers()
 		end
 	end
 	txts.montoredBox:text(getPrintable(targets, true))
-	txts.montoredBox:visible(modes.showMonitored)
+	txts.montoredBox:visible(settings.textBoxes.montoredBox.visible)
 	return targets
 end
 

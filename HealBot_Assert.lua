@@ -58,7 +58,7 @@ function isMoving()
 		timeAtPos = timeAtPos..'.0'
 	end
 	txts.moveInfo:text('Time @ '..currentPos:toString()..': '..timeAtPos..'s')
-	txts.moveInfo:visible(modes.showMoveInfo)
+	txts.moveInfo:visible(settings.textBoxes.moveInfo.visible)
 	return moving
 end
 
@@ -103,7 +103,7 @@ function isPerformingAction(moving)
 	end
 	
 	txts.actionInfo:text(myName..status)
-	txts.actionInfo:visible(modes.showActionInfo)
+	txts.actionInfo:visible(settings.textBoxes.actionInfo.visible)
 	return acting
 end
 
