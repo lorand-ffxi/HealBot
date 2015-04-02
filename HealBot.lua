@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.8.2'
-_addon.lastUpdate = '2015.03.27'
+_addon.version = '2.9.0'
+_addon.lastUpdate = '2015.04.02'
 
 _libs = _libs or {}
 _libs.luau = _libs.luau or require('luau')
@@ -27,6 +27,7 @@ require 'HealBot_queues'
 info = import('../info/info_share.lua')	--Load addons\info\info_share.lua for functions to print info from windower
 
 windower.register_event('load', function()
+	atcc(262,'Welcome to HealBot! To see a list of commands, type //hb help')
 	configs_loaded = false
 	load_configs()
 	
@@ -89,6 +90,7 @@ windower.register_event('prerender', function()
 		
 		local busy = moving or acting				--Player is busy if moving or acting
 		if active and (not busy) and ((now - lastAction) > actionDelay) then	--If acting is possible
+			checkOwnBuffs()
 			local action = getActionToPerform()		--Pick an action to perform
 			if (action ~= nil) then				--If there's a defensive action to perform
 				local act = action.action
@@ -151,7 +153,6 @@ function activate()
 		active = (maxCureTier > 0)
 	end
 	printStatus()
-	checkOwnBuffs()
 end
 
 function addPlayer(list, player)
@@ -167,8 +168,6 @@ function addPlayer(list, player)
 		end
 	end
 end
-
-local montoredBox = texts.new({pos={x=-150,y=600},text={font='Arial',size=10},flags={right=true}})
 
 function getMonitoredPlayers()
 	local pt = windower.ffxi.get_party()
@@ -195,8 +194,8 @@ function getMonitoredPlayers()
 			addPlayer(targets, extraPlayer)
 		end
 	end
-	montoredBox:text(getPrintable(targets, true))
-	montoredBox:visible(modes.showMonitored)
+	txts.montoredBox:text(getPrintable(targets, true))
+	txts.montoredBox:visible(modes.showMonitored)
 	return targets
 end
 

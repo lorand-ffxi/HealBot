@@ -18,9 +18,9 @@ function assertFollowTargetExistence()
 end
 
 function canCast(spell)
-	if spell.prefix == '/magic' then
-		local player = windower.ffxi.get_player()
-		if (player == nil) or (spell == nil) then return false end
+	local player = windower.ffxi.get_player()
+	if (player == nil) or (spell == nil) then return false end
+	if (spell.prefix == '/magic') then
 		local mainCanCast = (spell.levels[player.main_job_id] ~= nil) and (spell.levels[player.main_job_id] <= player.main_job_level)
 		local subCanCast = (spell.levels[player.sub_job_id] ~= nil) and (spell.levels[player.sub_job_id] <= player.sub_job_level)
 		local spellAvailable = windower.ffxi.get_spells()[spell.id]
@@ -37,11 +37,9 @@ function isTooFar(name)
 	return true
 end
 
-local moveInfo = texts.new({pos={x=0,y=18}})
-
 function isMoving()
 	if (getPosition() == nil) then
-		moveInfo:hide()
+		txts.moveInfo:hide()
 		return true
 	end
 	lastPos = lastPos and lastPos or getPosition()
@@ -59,12 +57,10 @@ function isMoving()
 	if math.floor(timeAtPos) == timeAtPos then
 		timeAtPos = timeAtPos..'.0'
 	end
-	moveInfo:text('Time @ '..currentPos:toString()..': '..timeAtPos..'s')
-	moveInfo:visible(modes.showMoveInfo)
+	txts.moveInfo:text('Time @ '..currentPos:toString()..': '..timeAtPos..'s')
+	txts.moveInfo:visible(modes.showMoveInfo)
 	return moving
 end
-
-local actionInfo = texts.new({pos={x=0,y=0}})
 
 function isPerformingAction(moving)
 	if (os.clock() - actionStart) > 8 then
@@ -93,7 +89,6 @@ function isPerformingAction(moving)
 	elseif zone_wait then
 		zone_wait = false
 		resetBuffTimers('ALL', S{'Protect V','Shell V'})
-		checkOwnBuffs()
 	elseif (buffActive('Sleep', 'Petrification', 'Charm', 'Terror', 'Lullaby', 'Stun', 'Silence', 'Mute') ~= nil) then
 		acting = true
 		status = 'is disabled'
@@ -107,8 +102,8 @@ function isPerformingAction(moving)
 		end
 	end
 	
-	actionInfo:text(myName..status)
-	actionInfo:visible(modes.showActionInfo)
+	txts.actionInfo:text(myName..status)
+	txts.actionInfo:visible(modes.showActionInfo)
 	return acting
 end
 

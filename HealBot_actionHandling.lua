@@ -5,8 +5,6 @@
 --]]
 --==============================================================================
 
-local actionQueue = texts.new({pos={x=-125,y=300},text={font='Arial',size=10},flags={right=true}})
-
 --[[
 	Returns the resource information for the given spell or ability name
 --]]
@@ -53,8 +51,8 @@ function getActionToPerform()
 		end
 	end
 	
-	actionQueue:text(getPrintable(queue))
-	actionQueue:visible(modes.showActionQueue)
+	txts.actionQueue:text(getPrintable(queue))
+	txts.actionQueue:visible(modes.showActionQueue)
 	
 	if (action.cure ~= nil) then
 		if (action.debuff ~= nil) and (action.debuff.prio < action.cure.prio) then

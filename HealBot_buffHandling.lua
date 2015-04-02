@@ -5,8 +5,9 @@
 --]]
 --==============================================================================
 
-debuffList = debuffList or {}
-buffList = buffList or {}
+debuffList = {}
+buffList = {}
+ignored_debuffs = {}
 
 --==============================================================================
 --			Local Player Buff Checking
@@ -52,7 +53,7 @@ function checkOwnBuffs()
 			end
 		end
 		--Double check the list of what should be active
-		local checklist = buffList[player.name] and buffList[player.name] or {}
+		local checklist = buffList[player.name] or {}
 		local active = S(player.buffs)
 		for bname,binfo in pairs(checklist) do
 			if not (active:contains(binfo.buff.id)) then
@@ -103,7 +104,12 @@ function getDebuffQueue()
 			if (removalSpellName ~= nil) then
 				if (info.attempted == nil) or ((now - info.attempted) >= 3) then
 					local spell = res.spells:with('en', removalSpellName)
-					dbq:enqueue('buff', spell, targ, debuff, ' ('..debuff..')')
+					if canCast(spell) and validTarget(spell, targ) then
+						local ign = ignored_debuffs[debuff]
+						if not ((ign ~= nil) and ((ign.all == true) or ((ign[targ] ~= nil) and (ign[targ] == true)))) then
+							dbq:enqueue('buff', spell, targ, debuff, ' ('..debuff..')')
+						end
+					end
 				end
 			else
 				debuffList[targ][debuff] = nil
@@ -177,17 +183,36 @@ function registerNewBuffName(targetName, bname, use)
 	end
 end
 
-function getTarget(targetName)
-	local me = windower.ffxi.get_player()
-	local target = windower.ffxi.get_mob_by_name(targetName)
-	if (target == nil) then
-		if (targetName == '<t>') then
-			target = windower.ffxi.get_mob_by_target()
-		elseif S{'<me>','me'}:contains(targetName) then
-			target = windower.ffxi.get_mob_by_id(me.id)
+function registerIgnoreDebuff(args, ignore)
+	local targetName = args[1] and args[1] or ''
+	table.remove(args, 1)
+	local arg_string = table.concat(args,' ')
+	
+	local msg = ignore and 'ignore' or 'stop ignoring'
+	
+	local dbname = debuff_casemap[arg_string:lower()]
+	if (dbname ~= nil) then
+		if S{'always','everyone','all'}:contains(targetName) then
+			ignored_debuffs[dbname] = {['all']=ignore}
+			atc('Will now '..msg..' '..dbname..' on everyone.')
+		else
+			local trgname = getPlayerName(targetName)
+			if (trgname ~= nil) then
+				ignored_debuffs[dbname] = ignored_debuffs[dbname] or {['all']=false}
+				if (ignored_debuffs[dbname].all == ignore) then
+					local msg2 = ignore and 'ignoring' or 'stopped ignoring'
+					atc('Ignore debuff settings unchanged. Already '..msg2..' '..dbname..' on everyone.')
+				else
+					ignored_debuffs[dbname][trgname] = ignore
+					atc('Will now '..msg..' '..dbname..' on '..trgname)
+				end
+			else
+				atc(123,'Error: Invalid target for ignore debuff: '..targetName)
+			end
 		end
+	else
+		atc(123,'Error: Invalid debuff name to '..msg..': '..arg_string)
 	end
-	return target
 end
 
 function getAction(actionName, target)
@@ -206,6 +231,9 @@ function getAction(actionName, target)
 end
 
 function validTarget(action, target)
+	if (type(target) == 'string') then
+		target = getTarget(target)
+	end
 	local me = windower.ffxi.get_player()
 	local targetType = 'None'
 	if (target.in_alliance) then
@@ -247,9 +275,7 @@ end
 --==============================================================================
 
 function registerDebuff(targetName, debuffName, gain)
-	if debuffList[targetName] == nil then
-		debuffList[targetName] = {}
-	end
+	debuffList[targetName] = debuffList[targetName] or {}
 	if (debuffName == 'slow') then
 		registerBuff(targetName, 'Haste', false)
 		registerBuff(targetName, 'Flurry', false)
@@ -274,9 +300,7 @@ function registerDebuff(targetName, debuffName, gain)
 end
 
 function registerBuff(targetName, buffName, gain)
-	if buffList[targetName] == nil then
-		buffList[targetName] = {}
-	end
+	buffList[targetName] = buffList[targetName] or {}
 	if buffList[targetName][buffName] ~= nil then
 		if gain then
 			buffList[targetName][buffName]['landed'] = os.clock()

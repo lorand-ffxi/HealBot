@@ -1,0 +1,27 @@
+<?xml version="1.1" ?>
+<settings>
+    <global>
+        <textBoxes>
+            <actionInfo>
+                <x>0</x>
+                <y>0</y>
+            </actionInfo>
+            <actionQueue>
+                <font>Arial</font>
+                <size>10</size>
+                <x>-125</x>
+                <y>300</y>
+            </actionQueue>
+            <montoredBox>
+                <font>Arial</font>
+                <size>10</size>
+                <x>-150</x>
+                <y>600</y>
+            </montoredBox>
+            <moveInfo>
+                <x>0</x>
+                <y>18</y>
+            </moveInfo>
+        </textBoxes>
+    </global>
+</settings>

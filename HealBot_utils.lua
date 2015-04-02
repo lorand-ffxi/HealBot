@@ -22,7 +22,7 @@ function processCommand(command,...)
 	elseif S{'stop','end','off'}:contains(command) then
 		active = false
 		printStatus()
-	elseif S{'assist'}:contains(command) then
+	elseif S{'assist','as'}:contains(command) then
 		local cmd = args[1] and args[1]:lower() or (assist and 'off' or 'resume')
 		if S{'off','end','false','pause'}:contains(cmd) then
 			assist = false
@@ -43,12 +43,8 @@ function processCommand(command,...)
 				assistAttack = true
 				atc('Will now enagage when assisting.')
 			end
-		else
-			local name = args[1]
-			if (name == '<t>') then
-				name = windower.ffxi.get_mob_by_target().name
-			end
-			assistTarget = formatName(name)
+		else	--args[1] is guaranteed to have a value if this is reached
+			assistTarget = getPlayerName(args[1])
 			assist = true
 			atc('Now assisting '..assistTarget..'.')
 		end
@@ -62,27 +58,45 @@ function processCommand(command,...)
 			atc('Error: Invalid argument specified for minCure')
 		end
 	elseif command == 'reset' then
-		local b = false
-		local d = false
-		if (args[1] == nil) then
+		if not validate(args, 1, 'Error: No argument specified for reset') then return end
+		local rcmd = args[1]:lower()
+		local b,d = false,false
+		if S{'all','both'}:contains(rcmd) then
+			b,d = true,true
+		elseif (rcmd == 'buffs') then
 			b = true
-			d = true
-		elseif (args[1]:lower() == 'buffs') then
-			b = true
-		elseif (args[1]:lower() == 'debuffs') then
+		elseif (rcmd == 'debuffs') then
 			d = true
 		else
 			atc('Error: Invalid argument specified for reset: '..arg[1])
+			return
 		end
-		if (b) then
-			for player,_ in pairs(buffList) do
-				resetBuffTimers(player)
+		
+		local resetTarget
+		if (args[2] ~= nil) and (args[3] ~= nil) and (args[2]:lower() == 'on') then
+			resetTarget = getPlayerName(args[3])
+		end
+		
+		if b then
+			if (resetTarget ~= nil) then
+				resetBuffTimers(resetTarget)
+				atc('Buffs registered for '..resetTarget..' were reset.')
+			else
+				for player,_ in pairs(buffList) do
+					resetBuffTimers(player)
+				end
+				atc('Buffs registered for all monitored players were reset.')
 			end
 		end
-		if (d) then
-			debuffList = {}
+		if d then
+			if (resetTarget ~= nil) then
+				debuffList[resetTarget]= {}
+				atc('Debuffs registered for '..resetTarget..' were reset.')
+			else
+				debuffList = {}
+				atc('Debuffs registered for all monitored players were reset.')
+			end
 		end
-		checkOwnBuffs()
 	elseif command == 'buff' then
 		registerNewBuff(args, true)
 	elseif command == 'cancelbuff' then
@@ -97,6 +111,10 @@ function processCommand(command,...)
 		else
 			atc('Error: Invalid argument specified for BuffList: '..args[1])
 		end
+	elseif command == 'ignore_debuff' then
+		registerIgnoreDebuff(args, true)
+	elseif command == 'unignore_debuff' then
+		registerIgnoreDebuff(args, false)
 	elseif S{'follow','f'}:contains(command) then
 		local cmd = args[1] and args[1]:lower() or (follow and 'off' or 'resume')
 		if S{'off','end','false','pause'}:contains(cmd) then
@@ -116,29 +134,43 @@ function processCommand(command,...)
 			else
 				atc(123,'Error: Unable to resume follow - no target set')
 			end
-		else
-			local name = args[1]
-			if name == '<t>' then
-				name = windower.ffxi.get_mob_by_target().name
-			end
-			followTarget = formatName(name)
+		else	--args[1] is guaranteed to have a value if this is reached
+			followTarget = getPlayerName(args[1])
 			follow = true
 			atc('Now following '..followTarget..'.')
 		end
 	elseif S{'ignore', 'unignore', 'watch', 'unwatch'}:contains(command) then
 		monitorCommand(command, args[1])
-	elseif command == 'moveinfo' then
-		toggleMode('showMoveInfo', args[1], 'Movement info', 'MoveInfo')
-	elseif command == 'packetinfo' then
-		toggleMode('showPacketInfo', args[1], 'Packet info display', 'PacketInfo')
-	elseif command == 'actioninfo' then
-		toggleMode('showActionInfo', args[1], 'Action info display', 'ActionInfo')
 	elseif command == 'ignoretrusts' then
 		toggleMode('ignoreTrusts', args[1], 'Ignoring of Trust NPCs', 'IgnoreTrusts')
+	elseif command == 'packetinfo' then
+		toggleMode('showPacketInfo', args[1], 'Packet info display', 'PacketInfo')
+	elseif command == 'moveinfo' then
+		if posCommand('moveInfo', args) then
+			refresh_textBoxes()
+		else
+			toggleMode('showMoveInfo', args[1], 'Movement info', 'MoveInfo')
+		end
+	elseif command == 'actioninfo' then
+		if posCommand('actionInfo', args) then
+			refresh_textBoxes()
+		else
+			toggleMode('showActionInfo', args[1], 'Action info display', 'ActionInfo')
+		end
 	elseif S{'showq','showqueue','queue'}:contains(command) then
-		toggleMode('showActionQueue', args[1], 'Action queue', 'ShowQueue')
+		if posCommand('actionQueue', args) then
+			refresh_textBoxes()
+		else
+			toggleMode('showActionQueue', args[1], 'Action queue', 'ShowQueue')
+		end
 	elseif S{'monitored','showmonitored'}:contains(command) then
-		toggleMode('showMonitored', args[1], 'Monitored players list', 'ShowMonitored')
+		if posCommand('montoredBox', args) then
+			refresh_textBoxes()
+		else
+			toggleMode('showMonitored', args[1], 'Monitored players list', 'ShowMonitored')
+		end
+	elseif S{'help','--help'}:contains(command) then
+		help_text()
 	elseif command == 'status' then
 		printStatus()
 	elseif command == 'info' then
@@ -153,6 +185,27 @@ function processCommand(command,...)
 	else
 		atc('Error: Unknown command')
 	end
+end
+
+function posCommand(boxName, args)
+	if (args[1] == nil) or (args[2] == nil) then return false end
+	local cmd = args[1]:lower()
+	if not S{'pos','posx','posy'}:contains(cmd) then
+		return false
+	end
+	local x,y = tonumber(args[2]),tonumber(args[3])
+	if (cmd == 'pos') then
+		if (x == nil) or (y == nil) then return false end
+		settings.textBoxes[boxName].x = x
+		settings.textBoxes[boxName].y = y
+	elseif (cmd == 'posx') then
+		if (x == nil) then return false end
+		settings.textBoxes[boxName].x = x
+	elseif (cmd == 'posy') then
+		if (y == nil) then return false end
+		settings.textBoxes[boxName].y = y
+	end
+	return true
 end
 
 function toggleMode(mode, cmd, msg, msgErr)
@@ -177,7 +230,7 @@ function monitorCommand(cmd, pname)
 		atc('Error: No argument specified for '..cmd)
 		return
 	end
-	local name = formatName(pname)
+	local name = getPlayerName(pname)
 	if cmd == 'ignore' then
 		if (not ignoreList:contains(name)) then
 			ignoreList:add(name)
@@ -223,6 +276,27 @@ function validate(args, numArgs, message)
 		end
 	end
 	return true
+end
+
+function getPlayerName(name)
+	local trg = getTarget(name)
+	if (trg ~= nil) then
+		return trg.name
+	end
+	return nil
+end
+
+function getTarget(targetName)
+	local me = windower.ffxi.get_player()
+	local target = windower.ffxi.get_mob_by_name(targetName)
+	if (target == nil) then
+		if (targetName == '<t>') then
+			target = windower.ffxi.get_mob_by_target()
+		elseif S{'<me>','me'}:contains(targetName) then
+			target = windower.ffxi.get_mob_by_id(me.id)
+		end
+	end
+	return target
 end
 
 --==============================================================================
@@ -292,6 +366,15 @@ function atc(c, msg)
 	windower.add_to_chat(c, '[HealBot]'..msg)
 end
 
+function atcc(c,msg)
+	if (type(c) == 'string') and (msg == nil) then
+		msg = c
+		c = 0
+	end
+	local hbmsg = '[HealBot]'..msg
+	windower.add_to_chat(0, hbmsg:colorize(c))
+end
+
 function atcd(c, msg)
 	if debugMode then atc(c, msg) end
 end
@@ -326,12 +409,26 @@ function printPairs(tbl, prefix)
 	end
 end
 
-function printInfo()
-	windower.add_to_chat(0, 'HealBot comands: (to be implemented)')
+function printStatus()
+	windower.add_to_chat(1, 'HealBot is now '..(active and 'active' or 'off')..'.')
 end
 
-function printStatus()
-	windower.add_to_chat(0, 'HealBot: '..(active and 'active' or 'off'))
+function colorFor(col)
+	local cstr = ''
+	if not ((S{256,257}:contains(col)) or (col<1) or (col>511)) then
+		if (col <= 255) then
+			cstr = string.char(0x1F)..string.char(col)
+		else
+			cstr = string.char(0x1E)..string.char(col - 256)
+		end
+	end
+	return cstr
+end
+
+function string.colorize(str, new_col, reset_col)
+	new_col = new_col or 1
+	reset_col = reset_col or 1
+	return colorFor(new_col)..str..colorFor(reset_col)
 end
 
 --==============================================================================
@@ -347,7 +444,17 @@ function import(path)
 end
 
 function load_configs()
-	aliases = config.load('..\\shortcuts\\data\\aliases.xml')
+	local defaults = {}
+	defaults.textBoxes = {
+		actionQueue={x=-125,y=300,font='Arial',size=10},
+		moveInfo={x=0,y=18},
+		actionInfo={x=0,y=0},
+		montoredBox={x=-150,y=600,font='Arial',size=10}
+	}
+	settings = config.load('data/settings.xml', defaults)
+	refresh_textBoxes()
+	
+	aliases = config.load('../shortcuts/data/aliases.xml')
 	mabil_debuffs = config.load('data/mabil_debuffs.xml')
 	defaultBuffs = config.load('data/buffLists.xml')
 	
@@ -362,6 +469,28 @@ function load_configs()
 	local msg = configs_loaded and 'Rel' or 'L'
 	configs_loaded = true
 	atc(15, msg..'oaded config files.')
+end
+
+function refresh_textBoxes()
+	local boxes = {'actionQueue','moveInfo','actionInfo','montoredBox'}
+	txts = txts or {}
+	for _,box in pairs(boxes) do
+		local bs = settings.textBoxes[box]
+		local bst = {pos={x=bs.x, y=bs.y}}
+		bst.flags = {right=(bs.x < 0), bottom=(bs.y < 0)}
+		if (bs.font ~= nil) then
+			bst.text = {font=bs.font}
+		end
+		if (bs.size ~= nil) then
+			bst.text = bst.text or {}
+			bst.text.size = bs.size
+		end
+		
+		if (txts[box] ~= nil) then
+			txts[box]:destroy()
+		end
+		txts[box] = texts.new(bst)
+	end
 end
 
 function populateTrustList()
@@ -428,6 +557,56 @@ function getPrintable(list, inverse)
 		end
 	end
 	return qstring
+end
+
+--======================================================================================================================
+--						Misc.
+--======================================================================================================================
+
+function help_text()
+	local t = '    '
+	local ac,cc,dc = 262,263,1
+	atc('HealBot Commands:':colorize(327))
+	local cmds = {
+		['on | off']='Activate / deactivate HealBot (does not affect follow)',
+		['reload']='Reload HealBot, resetting everything',
+		['refresh']='Reloads settings XMLs in addons/HealBot/data/',
+		['mincure <number>']='Sets the minimum cure spell tier to cast (default: 3)',
+		['reset [buffs | debuffs | both [on <player>]]']='Resets the list of buffs/debuffs that have been detected, optionally for a single player',
+		['buff <player> <spell>[, <spell>[, ...]]']='Sets spell(s) to be maintained on the given player',
+		['cancelbuff <player> <spell>[, <spell>[, ...]]']='Un-sets spell(s) to be maintained on the given player',
+		['bufflist <list name> <player>']='Sets the given list of spells to be maintained on the given player',
+		['ignore_debuff <player/always> <debuff>']='Ignores when the given debuff is cast on the given player or everyone',
+		['unignore_debuff <player/always> <debuff>']='Stops ignoring the given debuff for the given player or everyone',
+		['fcmd']='Sets a player to follow, the distance to maintain, or toggles being active with no argument',
+		['ignore <player>']='Ignores the given player/npc so they will not be healed',
+		['unignore <player>']='Stops ignoring the given player/npc (=/= watch)',
+		['watch <player>']='Monitors the given player/npc so they will be healed',
+		['unwatch <player>']='Stops monitoring the given player/npc (=/= ignore)',
+		['ignoretrusts <on/off>']='Toggles whether or not Trust NPCs should be ignored (default: on)',
+		['ascmd']='Sets a player to assist, toggles whether or not to engage, or toggles being active with no argument',
+		['queue [pos <x> <y> | on | off]']='Moves action queue, or toggles display with no argument (default: on)',
+		['actioninfo [pos <x> <y> | on | off]']='Moves character status info, or toggles display with no argument (default: on)',
+		['moveinfo [pos <x> <y> | on | off]']='Moves movement status info, or toggles display with no argument (default: off)',
+		['monitored [pos <x> <y> | on | off]']='Moves monitored player list, or toggles display with no argument (default: on)',
+		['help']='Displays this help text'
+	}
+	local acmds = {
+		['fcmd']='f':colorize(ac,cc)..'ollow [<player> | dist <distance> | off | resume]',
+		['ascmd']='as':colorize(ac,cc)..'sist [<player> | attack | off | resume]',
+	}
+	
+	for cmd,desc in pairs(cmds) do
+		local txta = cmd
+		if (acmds[cmd] ~= nil) then
+			txta = acmds[cmd]
+		else
+			txta = txta:colorize(cc)
+		end
+		local txtb = desc:colorize(dc)
+		atc(txta)
+		atc(t..txtb)
+	end
 end
 
 --======================================================================================================================
