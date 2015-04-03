@@ -23,30 +23,68 @@ function processCommand(command,...)
 		active = false
 		printStatus()
 	elseif S{'assist','as'}:contains(command) then
-		local cmd = args[1] and args[1]:lower() or (assist and 'off' or 'resume')
+		local cmd = args[1] and args[1]:lower() or (settings.assist.active and 'off' or 'resume')
 		if S{'off','end','false','pause'}:contains(cmd) then
-			assist = false
+			settings.assist.active = false
 			atc('Assist is now off.')
 		elseif S{'resume'}:contains(cmd) then
-			if (assistTarget ~= nil) then
-				assist = true
-				atc('Now assisting '..assistTarget..'.')
+			if (settings.assist.name ~= nil) then
+				settings.assist.active = true
+				atc('Now assisting '..settings.assist.name..'.')
 			else
 				atc(123,'Error: Unable to resume assist - no target set')
 			end
 		elseif S{'attack','engage'}:contains(cmd) then
-			local cmd2 = args[2] and args[2]:lower() or (assistAttack and 'off' or 'resume')
+			local cmd2 = args[2] and args[2]:lower() or (settings.assist.engage and 'off' or 'resume')
 			if S{'off','end','false','pause'}:contains(cmd2) then
-				assistAttack = false
+				settings.assist.engage = false
 				atc('Will no longer enagage when assisting.')
 			else
-				assistAttack = true
+				settings.assist.engage = true
 				atc('Will now enagage when assisting.')
 			end
 		else	--args[1] is guaranteed to have a value if this is reached
-			assistTarget = getPlayerName(args[1])
-			assist = true
-			atc('Now assisting '..assistTarget..'.')
+			settings.assist.name = getPlayerName(args[1])
+			settings.assist.active = true
+			atc('Now assisting '..settings.assist.name..'.')
+		end
+	elseif S{'ws','weaponskill'}:contains(command) then
+		local lte,gte = string.char(0x81, 0x85),string.char(0x81, 0x86)
+		local cmd = args[1] and args[1] or ''
+		settings.ws = settings.ws or {}
+		if S{'use','set'}:contains(cmd) then	-- ws name
+			table.remove(args, 1)
+			local argstr = table.concat(args,' ')
+			local wsname = formatSpellName(argstr)
+			local ws = res.weapon_skills:with('en', wsname)
+			if (ws ~= nil) then
+				settings.ws.name = wsname
+				atc('Will now use '..wsname)
+			else
+				atc(123,'Error: Invalid weaponskill name: '..wsname)
+			end
+		elseif (cmd == 'waitfor') then		--another player's TP
+			local partner = getPlayerName(args[2])
+			if (partner ~= nil) then
+				local partnertp = tonumber(args[3]) or 1000
+				settings.ws.partner = {name=partner,tp=partnertp}
+				atc("Will weaponskill when "..partner.."'s TP is "..gte.." "..partnertp)
+			else
+				atc(123,'Error: Invalid argument for ws waitfor: '..tostring(args[2]))
+			end
+		elseif (cmd == 'nopartner') then
+			settings.ws.partner = nil
+			atc('Weaponskill partner removed.')
+		elseif (cmd == 'hp') then		--Target's HP
+			local sign = S{'<','>'}:contains(args[2]) and args[2] or nil
+			local hp = tonumber(args[3])
+			if (sign ~= nil) and (hp ~= nil) then
+				settings.ws.sign = sign
+				settings.ws.hp = hp
+				atc("Will weaponskill when the target's HP is "..sign.." "..hp.."%")
+			else
+				atc(123,'Error: Invalid arguments for ws hp: '..tostring(args[2])..', '..tostring(args[3]))
+			end
 		end
 	elseif command == 'mincure' then
 		if not validate(args, 1, 'Error: No argument specified for minCure') then return end
@@ -308,6 +346,16 @@ function getTarget(targetName)
 		end
 	end
 	return target
+end
+
+function getPartyMember(name)
+	local party = windower.ffxi.get_party()
+	for _,pmember in pairs(party) do
+		if (type(pmember) == 'table') and (pmember.name == name) then
+			return pmember
+		end
+	end
+	return nil
 end
 
 --==============================================================================
@@ -596,6 +644,10 @@ function help_text()
 		['unwatch <player>']='Stops monitoring the given player/npc (=/= ignore)',
 		['ignoretrusts <on/off>']='Toggles whether or not Trust NPCs should be ignored (default: on)',
 		['ascmd']='Sets a player to assist, toggles whether or not to engage, or toggles being active with no argument',
+		['wscmd1']='Sets the weaponskill to use',
+		['wscmd2']='Sets when weaponskills should be used according to whether the mob HP is < or > the given amount',
+		['wscmd3']='Sets a weaponskill partner to open skillchains for, and the TP that they should have',
+		['wscmd4']='Removes a weaponskill partner so weaponskills will be performed independently',
 		['queue [pos <x> <y> | on | off]']='Moves action queue, or toggles display with no argument (default: on)',
 		['actioninfo [pos <x> <y> | on | off]']='Moves character status info, or toggles display with no argument (default: on)',
 		['moveinfo [pos <x> <y> | on | off]']='Moves movement status info, or toggles display with no argument (default: off)',
@@ -605,6 +657,10 @@ function help_text()
 	local acmds = {
 		['fcmd']='f':colorize(ac,cc)..'ollow [<player> | dist <distance> | off | resume]',
 		['ascmd']='as':colorize(ac,cc)..'sist [<player> | attack | off | resume]',
+		['wscmd1']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill use <ws name>',
+		['wscmd2']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill hp <sign> <mob hp%>',
+		['wscmd3']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill waitfor <player> <tp>',
+		['wscmd4']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill nopartner',
 	}
 	
 	for cmd,desc in pairs(cmds) do

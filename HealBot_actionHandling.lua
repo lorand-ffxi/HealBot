@@ -11,12 +11,18 @@
 function getActionFor(actionName)
 	local spell = res.spells:with('en', actionName)
 	local abil = res.job_abilities:with('en', actionName)
-	if (spell ~= nil) then
-		return spell
-	elseif (abil ~= nil) then
-		return abil
-	end
-	return nil
+	local ws = res.weapon_skills:with('en', actionName)
+	
+	return spell or abil or ws or nil
+	
+	-- if (spell ~= nil) then
+		-- return spell
+	-- elseif (abil ~= nil) then
+		-- return abil
+	-- elseif (ws ~= nil) then
+		-- return ws
+	-- end
+	-- return nil
 end
 
 --[[
@@ -102,14 +108,37 @@ end
 	TODO: Expand
 --]]
 function getOffensiveAction()
+	local me = windower.ffxi.get_player()
 	local target = windower.ffxi.get_mob_by_target()
 	if (target ~= nil) then
-		enemyInfo = enemyInfo or {}
-		if (target.id ~= enemyInfo.id) then
-			enemyInfo = {lastCast={}}
-			enemyInfo.id = target.id
-			enemyInfo.lastCast['Dia III'] = os.clock()
-			return {action=getActionFor('Dia III'),name='<t>'}
+		-- enemyInfo = enemyInfo or {}
+		-- if (target.id ~= enemyInfo.id) then
+			-- enemyInfo = {lastCast={}}
+			-- enemyInfo.id = target.id
+			-- enemyInfo.lastCast['Dia III'] = os.clock()
+			-- return {action=getActionFor('Dia III'),name='<t>'}
+		-- end
+		
+		if (me.status == 1) and (me.vitals.tp > 999) and (settings.ws ~= nil) and (settings.ws.name ~= nil) then
+			local sign = settings.ws.sign or '>'
+			local hp = settings.ws.hp or 0
+			local hp_ok = ((sign == '<') and (target.hpp <= hp)) or ((sign == '>') and (target.hpp >= hp))
+			
+			local partner_ok = true
+			if (settings.ws.partner ~= nil) then
+				local pname = settings.ws.partner.name
+				local partner = getPartyMember(pname)
+				if (partner ~= nil) then
+					partner_ok = partner.tp >= settings.ws.partner.tp
+				else
+					partner_ok = false
+					atc(123,'Unable to locate weaponskill partner '..pname)
+				end
+			end
+			
+			if (hp_ok and partner_ok) then
+				return {action=getActionFor(settings.ws.name),name='<t>'}
+			end
 		end
 	end
 	return nil

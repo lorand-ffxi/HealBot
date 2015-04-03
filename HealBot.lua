@@ -1,7 +1,7 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.9.1'
+_addon.version = '2.9.2'
 _addon.lastUpdate = '2015.04.02'
 
 _libs = _libs or {}
@@ -31,6 +31,8 @@ windower.register_event('load', function()
 	configs_loaded = false
 	load_configs()
 	
+	settings.assist = {active=false,engage=false}
+	
 	zone_enter = os.clock()-25
 	zone_wait = false
 	
@@ -53,7 +55,6 @@ windower.register_event('load', function()
 	minCureTier = 3
 	lastActingState = false
 	partyMemberInfo = {}
-	assist = false
 end)
 
 windower.register_event('logout', function()
@@ -108,28 +109,32 @@ windower.register_event('prerender', function()
 				atcd(act.en..sparr..tname..msg)			--Debug message
 				wcmd(act.prefix, act.en, tname)			--Send command to windower
 			else						--Otherwise, there may be an offensive action
-				if assist and (assistTarget ~= nil) then
-					local atarg = windower.ffxi.get_mob_by_name(assistTarget)
-					if (atarg ~= nil) then
-						local targ = windower.ffxi.get_mob_by_index(atarg.target_index)
+				if settings.assist.active and (settings.assist.name ~= nil) then
+					local partner = windower.ffxi.get_mob_by_name(settings.assist.name)
+					if (partner ~= nil) then
+						local targ = windower.ffxi.get_mob_by_index(partner.target_index)
 						if (targ ~= nil) and targ.is_npc then
-							if (player.target_index == atarg.target_index) then	--Same targets
-								local action = getOffensiveAction()
-								if (action ~= nil) then
-									local act = action.action
-									local tname = action.name
-									local msg = action.msg or ''
-									
-									atcd(act.en..sparr..tname..msg)	--Debug message
-									wcmd(act.prefix, act.en, tname)	--Send cmd to windower
+						
+							local partner_engaged = (partner.status == 1)
+							local self_engaged = (player.status == 1)
+						
+							if (player.target_index == partner.target_index) then	--Same targets
+								if settings.assist.engage and partner_engaged and (not self_engaged) then
+									windower.send_command('input /attack on')
+								else
+									local action = getOffensiveAction()
+									if (action ~= nil) then
+										local act = action.action
+										local tname = action.name
+										local msg = action.msg or ''
+										
+										atcd(act.en..sparr..tname..msg)	--Debug message
+										wcmd(act.prefix, act.en, tname)	--Send cmd to windower
+									end
 								end
-							else
-								local at_engaged = (atarg.status == 1)
-								local self_engaged = (player.status == 1)
-								if at_engaged and (not self_engaged) then	--Should assist
-									assistAttack = assistAttack and assistAttack or false
-									local attcmd = assistAttack and ';wait 0.8;input /attack on' or ''
-									windower.send_command('input /as '..assistTarget..attcmd)
+							else							--Different targets
+								if partner_engaged and (not self_engaged) then
+									windower.send_command('input /as '..settings.assist.name)
 								end
 							end
 						end
