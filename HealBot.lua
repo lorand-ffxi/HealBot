@@ -1,7 +1,7 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.9.2'
+_addon.version = '2.9.3'
 _addon.lastUpdate = '2015.04.02'
 
 _libs = _libs or {}

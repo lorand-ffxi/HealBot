@@ -627,32 +627,32 @@ function help_text()
 	local ac,cc,dc = 262,263,1
 	atc('HealBot Commands:':colorize(327))
 	local cmds = {
-		['on | off']='Activate / deactivate HealBot (does not affect follow)',
-		['reload']='Reload HealBot, resetting everything',
-		['refresh']='Reloads settings XMLs in addons/HealBot/data/',
-		['mincure <number>']='Sets the minimum cure spell tier to cast (default: 3)',
-		['reset [buffs | debuffs | both [on <player>]]']='Resets the list of buffs/debuffs that have been detected, optionally for a single player',
-		['buff <player> <spell>[, <spell>[, ...]]']='Sets spell(s) to be maintained on the given player',
-		['cancelbuff <player> <spell>[, <spell>[, ...]]']='Un-sets spell(s) to be maintained on the given player',
-		['bufflist <list name> <player>']='Sets the given list of spells to be maintained on the given player',
-		['ignore_debuff <player/always> <debuff>']='Ignores when the given debuff is cast on the given player or everyone',
-		['unignore_debuff <player/always> <debuff>']='Stops ignoring the given debuff for the given player or everyone',
-		['fcmd']='Sets a player to follow, the distance to maintain, or toggles being active with no argument',
-		['ignore <player>']='Ignores the given player/npc so they will not be healed',
-		['unignore <player>']='Stops ignoring the given player/npc (=/= watch)',
-		['watch <player>']='Monitors the given player/npc so they will be healed',
-		['unwatch <player>']='Stops monitoring the given player/npc (=/= ignore)',
-		['ignoretrusts <on/off>']='Toggles whether or not Trust NPCs should be ignored (default: on)',
-		['ascmd']='Sets a player to assist, toggles whether or not to engage, or toggles being active with no argument',
-		['wscmd1']='Sets the weaponskill to use',
-		['wscmd2']='Sets when weaponskills should be used according to whether the mob HP is < or > the given amount',
-		['wscmd3']='Sets a weaponskill partner to open skillchains for, and the TP that they should have',
-		['wscmd4']='Removes a weaponskill partner so weaponskills will be performed independently',
-		['queue [pos <x> <y> | on | off]']='Moves action queue, or toggles display with no argument (default: on)',
-		['actioninfo [pos <x> <y> | on | off]']='Moves character status info, or toggles display with no argument (default: on)',
-		['moveinfo [pos <x> <y> | on | off]']='Moves movement status info, or toggles display with no argument (default: off)',
-		['monitored [pos <x> <y> | on | off]']='Moves monitored player list, or toggles display with no argument (default: on)',
-		['help']='Displays this help text'
+		{'on | off','Activate / deactivate HealBot (does not affect follow)'},
+		{'reload','Reload HealBot, resetting everything'},
+		{'refresh','Reloads settings XMLs in addons/HealBot/data/'},
+		{'mincure <number>','Sets the minimum cure spell tier to cast (default: 3)'},
+		{'reset [buffs | debuffs | both [on <player>]]','Resets the list of buffs/debuffs that have been detected, optionally for a single player'},
+		{'buff <player> <spell>[, <spell>[, ...]]','Sets spell(s) to be maintained on the given player'},
+		{'cancelbuff <player> <spell>[, <spell>[, ...]]','Un-sets spell(s) to be maintained on the given player'},
+		{'bufflist <list name> <player>','Sets the given list of spells to be maintained on the given player'},
+		{'ignore_debuff <player/always> <debuff>','Ignores when the given debuff is cast on the given player or everyone'},
+		{'unignore_debuff <player/always> <debuff>','Stops ignoring the given debuff for the given player or everyone'},
+		{'fcmd','Sets a player to follow, the distance to maintain, or toggles being active with no argument'},
+		{'ignore <player>','Ignores the given player/npc so they will not be healed'},
+		{'unignore <player>','Stops ignoring the given player/npc (=/= watch)'},
+		{'watch <player>','Monitors the given player/npc so they will be healed'},
+		{'unwatch <player>','Stops monitoring the given player/npc (=/= ignore)'},
+		{'ignoretrusts <on/off>','Toggles whether or not Trust NPCs should be ignored (default: on)'},
+		{'ascmd','Sets a player to assist, toggles whether or not to engage, or toggles being active with no argument'},
+		{'wscmd1','Sets the weaponskill to use'},
+		{'wscmd2','Sets when weaponskills should be used according to whether the mob HP is < or > the given amount'},
+		{'wscmd3','Sets a weaponskill partner to open skillchains for, and the TP that they should have'},
+		{'wscmd4','Removes a weaponskill partner so weaponskills will be performed independently'},
+		{'queue [pos <x> <y> | on | off]','Moves action queue, or toggles display with no argument (default: on)'},
+		{'actioninfo [pos <x> <y> | on | off]','Moves character status info, or toggles display with no argument (default: on)'},
+		{'moveinfo [pos <x> <y> | on | off]','Moves movement status info, or toggles display with no argument (default: off)'},
+		{'monitored [pos <x> <y> | on | off]','Moves monitored player list, or toggles display with no argument (default: on)'},
+		{'help','Displays this help text'}
 	}
 	local acmds = {
 		['fcmd']='f':colorize(ac,cc)..'ollow [<player> | dist <distance> | off | resume]',
@@ -663,7 +663,9 @@ function help_text()
 		['wscmd4']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill nopartner',
 	}
 	
-	for cmd,desc in pairs(cmds) do
+	for _,tbl in pairs(cmds) do
+	--for cmd,desc in pairs(cmds) do
+		local cmd,desc = tbl[1],tbl[2]
 		local txta = cmd
 		if (acmds[cmd] ~= nil) then
 			txta = acmds[cmd]
