@@ -55,8 +55,10 @@ dec2roman = {'I','II','III','IV','V','VI','VII','VIII','IX','X','XI'}
 roman2dec = {['I']=1,['II']=2,['III']=3,['IV']=4,['V']=5,['VI']=6,['VII']=7,['VIII']=8,['IX']=9,['X']=10,['XI']=11}
 
 cure_potencies = {[1]=87, [2]=199, [3]=438, [4]=816, [5]=1056, [6]=1311}
-tier_of_cure = {['Cure'] = 1, ['Cure II'] = 2, ['Cure III'] = 3, ['Cure IV'] = 4, ['Cure V'] = 5, ['Cure VI'] = 6}
+tier_of_cure = {['Cure']=1,['Cure II']=2,['Cure III']=3,['Cure IV']=4,['Cure V']=5,['Cure VI']=6}
+tier_of_curaga = {['Curaga']=1,['Curaga II']=2,['Curaga III']=3,['Curaga IV']=4,['Curaga V']=5}
 cure_of_tier = {'Cure','Cure II','Cure III','Cure IV','Cure V','Cure VI'}
+curaga_of_tier = {'Curaga','Curaga II','Curaga III','Curaga IV','Curaga V'}
 
 -----------------------------------------------------------------------------------------------------------
 --[[

@@ -14,46 +14,43 @@ function getActionFor(actionName)
 	local ws = res.weapon_skills:with('en', actionName)
 	
 	return spell or abil or ws or nil
-	
-	-- if (spell ~= nil) then
-		-- return spell
-	-- elseif (abil ~= nil) then
-		-- return abil
-	-- elseif (ws ~= nil) then
-		-- return ws
-	-- end
-	-- return nil
 end
 
 --[[
 	Builds an action queue for defensive actions.  Returns the action deemed most important at the time.
 --]]
 function getActionToPerform()
-	local cureq = getCureQueue()
-	local dbuffq = getDebuffQueue()
-	local buffq = getBuffQueue()
 	local queue = L({})
 	local action = {}
 	
-	while (not settings.disable.cure) and (not cureq:empty()) do
-		local cact = cureq:pop()
-		queue:append(tostring(cact.action.en)..' → '..tostring(cact.name))
-		if (action.cure == nil) and (not isTooFar(cact.name)) then
-			action.cure = cact
+	if (not settings.disable.cure) then
+		local cureq = getCureQueue()
+		while (not cureq:empty()) do
+			local cact = cureq:pop()
+			queue:append(tostring(cact.action.en)..' → '..tostring(cact.name))
+			if (action.cure == nil) and (not isTooFar(cact.name)) then
+				action.cure = cact
+			end
 		end
 	end
-	while (not settings.disable.na) and (not dbuffq:empty()) do
-		local dbact = dbuffq:pop()
-		queue:append(tostring(dbact.action.en)..' → '..tostring(dbact.name))
-		if (action.debuff == nil) and (not isTooFar(dbact.name)) and readyToCast(dbact.action) then
-			action.debuff = dbact
+	if (not settings.disable.na) then
+		local dbuffq = getDebuffQueue()
+		while (not dbuffq:empty()) do
+			local dbact = dbuffq:pop()
+			queue:append(tostring(dbact.action.en)..' → '..tostring(dbact.name))
+			if (action.debuff == nil) and (not isTooFar(dbact.name)) and readyToCast(dbact.action) then
+				action.debuff = dbact
+			end
 		end
 	end
-	while (not settings.disable.buff) and (not buffq:empty()) do
-		local bact = buffq:pop()
-		queue:append(tostring(bact.action.en)..' → '..tostring(bact.name))
-		if (action.buff == nil) and (not isTooFar(bact.name)) and readyToCast(bact.action) then
-			action.buff = bact
+	if (not settings.disable.buff) then
+		local buffq = getBuffQueue()
+		while (not buffq:empty()) do
+			local bact = buffq:pop()
+			queue:append(tostring(bact.action.en)..' → '..tostring(bact.name))
+			if (action.buff == nil) and (not isTooFar(bact.name)) and readyToCast(bact.action) then
+				action.buff = bact
+			end
 		end
 	end
 	
@@ -61,7 +58,9 @@ function getActionToPerform()
 	txts.actionQueue:visible(settings.textBoxes.actionQueue.visible)
 	
 	if (action.cure ~= nil) then
-		if (action.debuff ~= nil) and (action.debuff.prio < action.cure.prio) then
+		if (action.debuff ~= nil) and (action.debuff.action.en == 'Paralyna') and (action.debuff.name == myName) then
+			return action.debuff
+		elseif (action.debuff ~= nil) and (action.debuff.prio < action.cure.prio) then
 			return action.debuff
 		elseif (action.buff ~= nil) and (action.buff.prio < action.cure.prio) then
 			return action.buff

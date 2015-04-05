@@ -6,17 +6,96 @@
 --==============================================================================
 
 function getCureQueue()
-	local cq = ActionQueue.new()
-	local hpTable = getMissingHps()
-	for name,p in pairs(hpTable) do
-		if (p.hpp < 95) then
-			local spell = get_cure_to_cast(p.missing)
-			if (spell ~= nil) then
-				cq:enqueue('cure', spell, name, p.hpp, ' ('..p.missing..')')
+	local cq = ActionQueue.new()		--Initialize a new ActionQueue
+	local hpTable = getMissingHps()		--Fetch a list of monitored players & the amounts of HP they're missing
+	local tierReqs = {}			--Initialize a table to store the cure tier required for each
+	
+	for name,p in pairs(hpTable) do				--Iterate through the missing HP table
+		if (p.hpp < 95) then				--Ignore players with HP > 95%
+			local tier = get_tier_for_hp(p.missing)	--Pick a cure tier based on the amount of HP missing
+			if (tier >= minCureTier) then		--Filter out players without enough HP missing
+				tierReqs[name] = tier	
+				local spell = get_cure_to_cast(p.missing, tier)	--Edit tier for MP and recast timers
+				if (spell ~= nil) then
+					cq:enqueue('cure', spell, name, p.hpp, ' ('..p.missing..')')	--Enqueue it
+				end
 			end
 		end
 	end
-	return cq:getQueue()
+	--If enough members need cures, determine if a Curaga spell should be used
+	if (not settings.disable.curaga) and (sizeof(tierReqs) > 2) and (settings.maxCuragaTier > 0) then
+		local spell,targ = get_curaga_to_cast(tierReqs)		--Determine a target and Curaga to cast
+		if (spell ~= nil) then					--If Curaga can/should be cast...
+			local cgaq = ActionQueue.new()
+			local p = hpTable[targ]
+			cgaq:enqueue('cure', spell, targ, p.hpp, ' ('..p.missing..')')
+			return cgaq:getQueue()				--Return the Curaga spell
+		end
+	end								--If Curaga isn't necessary / can't be cast...
+	return cq:getQueue()						--Return the single target Cure queue instead
+end
+
+function get_curaga_to_cast(tierReqs)
+	local party = getMainPartyList()
+	local positions = {}
+	
+	local c,tsum = 1,0
+	for name,tier in pairs(tierReqs) do
+		if party:contains(name) then
+			positions[c] = {['name']=name, ['pos']=getPosition(name)}
+			c = c + 1
+			tsum = tsum + tier
+		else
+			atc('Not in party: '..tostring(name))
+		end
+	end
+	if (c < 2) then return nil end
+	
+	local targ,fewestTooFar = 1,1
+	local distances = {}
+	local found = false
+	while (targ < c) and (not found) do
+		local tpos = positions[targ].pos
+		distances[targ] = {}
+		
+		local maxdist,tooFar = -1,0
+		for i,p in pairs(positions) do
+			local dist = tpos:getDistance(p.pos)
+			maxdist = (dist > maxdist) and dist or maxdist
+			distances[targ][i] = dist
+			if (dist > 9.9) then
+				tooFar = tooFar + 1
+			end
+		end
+		distances[targ].tooFarCount = tooFar
+		
+		if (distances[fewestTooFar].tooFarCount > tooFar) then
+			fewestTooFar = targ
+		end
+		if (maxdist < 10) then
+			found = true
+		end
+		targ = targ + 1
+	end
+	
+	if ((c - distances[fewestTooFar].tooFarCount) == 1) then
+		return nil	--Everyone is too far apart for a curaga
+	end
+	
+	local cgaTier = round(tsum / c) - 1
+	cgaTier = (cgaTier > settings.maxCuragaTier) and settings.maxCuragaTier or cgaTier
+	cgaTier = (cgaTier < 1) and 1 or cgaTier
+	local player = windower.ffxi.get_player()
+	local recasts = windower.ffxi.get_spell_recasts()
+	local spell = res.spells:with('en', curaga_of_tier[cgaTier])
+	local rctime = recasts[spell.recast_id] or 0
+	local mpMult = cureCostMod()
+	local mpTooLow = (spell.mp_cost * mpMult) > player.vitals.mp
+	
+	if not ((rctime > 0) or mpTooLow) then
+		return spell, positions[fewestTooFar].name
+	end
+	return nil
 end
 
 --[[
@@ -24,9 +103,9 @@ end
 	the amount of HP that the target is missing, the player's current MP, and
 	the player's recast timers.
 --]]
-function get_cure_to_cast(hpMissing)
+function get_cure_to_cast(hpMissing, baseTier)
 	local player = windower.ffxi.get_player()			--Get player info
-	local tier = get_tier_for_hp(hpMissing)				--Choose Cure tier by hp missing
+	local tier = baseTier						--Choose Cure tier by hp missing
 	if (tier < minCureTier) then return nil end			--Return nil if not enough is missing
 	
 	local recasts = windower.ffxi.get_spell_recasts()		--Get recast timers
@@ -49,7 +128,7 @@ end
 	the target is missing.
 --]]
 function get_tier_for_hp(hpMissing)
-	local tier = maxCureTier				--Set the Cure tier to the maximum castable tier
+	local tier = settings.maxCureTier			--Set the Cure tier to the maximum castable tier
 	local potency = cure_potencies[tier]			--Retrieve the Cure potency for the given tier
 	local pdelta = potency - cure_potencies[tier-1]		--Calculate the potency difference between this tier and the next lowest tier
 	local threshold = potency - (pdelta * 0.5)		--Calculate the value to compare the amount of missing HP to
@@ -127,22 +206,34 @@ end
 	Returns the tier of the highest potency Cure spell that the player is
 	currently able to cast.
 --]]
-function determineHighestCureTier()
-	local highestTier = 0
+function determineHighestCureTiers()
+	local highestCure,highestCuraga = 0,0
 	for id, avail in pairs(windower.ffxi.get_spells()) do
 		if avail then
 			local spell = res.spells[id]
 			if S(cure_of_tier):contains(spell.en) then
 				if canCast(spell) then
 					local tier = tier_of_cure[spell.en]
-					if tier > highestTier then
-						highestTier = tier
+					if tier > highestCure then
+						highestCure = tier
 					end
-				end				
+				end
+			elseif S(curaga_of_tier):contains(spell.en) then
+				if canCast(spell) then
+					local tier = tier_of_curaga[spell.en]
+					if tier > highestCuraga then
+						highestCuraga = tier
+					end
+				end
 			end
 		end
 	end
-	return highestTier
+	
+	settings.maxCureTier = highestCure
+	settings.maxCuragaTier = highestCuraga
+	if (settings.maxCureTier == 0) then
+		disableCommand('cure', true)
+	end
 end
 
 --======================================================================================================================

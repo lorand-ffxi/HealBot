@@ -1,7 +1,7 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.9.5'
+_addon.version = '2.9.6'
 _addon.lastUpdate = '2015.04.05'
 
 _libs = _libs or {}
@@ -28,6 +28,7 @@ info = import('../info/info_share.lua')	--Load addons\info\info_share.lua for fu
 
 windower.register_event('load', function()
 	atcc(262,'Welcome to HealBot! To see a list of commands, type //hb help')
+	atcc(261,'Curaga use is in beta testing! If it causes issues, you can disable it via //hb disable curaga, or in your settings xml')
 	configs_loaded = false
 	load_configs()
 	
@@ -157,10 +158,7 @@ end
 function activate()
 	local player = windower.ffxi.get_player()
 	if player ~= nil then
-		maxCureTier = determineHighestCureTier()
-		if (maxCureTier == 0) then
-			disableCommand('cure', true)
-		end
+		determineHighestCureTiers()
 		active = true
 	end
 	printStatus()

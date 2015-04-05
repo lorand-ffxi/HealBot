@@ -50,9 +50,14 @@ function processCommand(command,...)
 				atc('Will now enagage when assisting.')
 			end
 		else	--args[1] is guaranteed to have a value if this is reached
-			settings.assist.name = getPlayerName(args[1])
-			settings.assist.active = true
-			atc('Now assisting '..settings.assist.name..'.')
+			local pname = getPlayerName(args[1])
+			if (pname ~= nil) then
+				settings.assist.name = pname
+				settings.assist.active = true
+				atc('Now assisting '..settings.assist.name..'.')
+			else
+				atc(123,'Error: Invalid name provided as an assist target: '..tostring(args[1]))
+			end
 		end
 	elseif S{'ws','weaponskill'}:contains(command) then
 		local lte,gte = string.char(0x81, 0x85),string.char(0x81, 0x86)
@@ -118,7 +123,13 @@ function processCommand(command,...)
 		
 		local resetTarget
 		if (args[2] ~= nil) and (args[3] ~= nil) and (args[2]:lower() == 'on') then
-			resetTarget = getPlayerName(args[3])
+			local pname = getPlayerName(args[3])
+			if (pname ~= nil) then
+				resetTarget = pname
+			else
+				atc(123,'Error: Invalid name provided as a reset target: '..tostring(args[3]))
+				return
+			end
 		end
 		
 		if b then
@@ -179,9 +190,14 @@ function processCommand(command,...)
 				atc(123,'Error: Unable to resume follow - no target set')
 			end
 		else	--args[1] is guaranteed to have a value if this is reached
-			followTarget = getPlayerName(args[1])
-			follow = true
-			atc('Now following '..followTarget..'.')
+			local pname = getPlayerName(args[1])
+			if (pname ~= nil) then
+				followTarget = pname
+				follow = true
+				atc('Now following '..followTarget..'.')
+			else
+				atc(123,'Error: Invalid name provided as a follow target: '..tostring(args[1]))
+			end
 		end
 	elseif S{'ignore', 'unignore', 'watch', 'unwatch'}:contains(command) then
 		monitorCommand(command, args[1])
@@ -215,6 +231,12 @@ function processCommand(command,...)
 		end
 	elseif S{'help','--help'}:contains(command) then
 		help_text()
+	elseif command == 'settings' then
+		for k,v in pairs(settings) do
+			local kstr = tostring(k)
+			local vstr = (type(v) == 'table') and tostring(T(v)) or tostring(v)
+			atc(kstr:rpad(' ',15)..': '..vstr)
+		end
 	elseif command == 'status' then
 		printStatus()
 	elseif command == 'info' then
@@ -284,8 +306,7 @@ function disableCommand(cmd, disable)
 	local msg = ' is now '..(disable and 'disabled.' or 're-enabled.')
 	if S{'cure','cures','curing'}:contains(cmd) then
 		if (not disable) then
-			maxCureTier = determineHighestCureTier()
-			if (maxCureTier == 0) then
+			if (settings.maxCureTier == 0) then
 				settings.disable.cure = true
 				atc(123,'Error: Unable to enable curing because you have no Cure spells available.')
 				return
@@ -293,6 +314,9 @@ function disableCommand(cmd, disable)
 		end
 		settings.disable.cure = disable
 		atc('Curing'..msg)
+	elseif S{'curaga'}:contains(cmd) then
+		settings.disable.curaga = disable
+		atc('Curaga use'..msg)
 	elseif S{'na','heal_debuff','cure_debuff'}:contains(cmd) then
 		settings.disable.na = disable
 		atc('Removal of status effects'..msg)
@@ -395,6 +419,18 @@ function getPartyMember(name)
 		end
 	end
 	return nil
+end
+
+function getMainPartyList()
+	local pt = windower.ffxi.get_party()
+	local pty = {pt.p0,pt.p1,pt.p2,pt.p3,pt.p4,pt.p5}
+	local party = S{}
+	for _,pm in pairs(pty) do
+		if (pm ~= nil) then
+			party:add(pm.name)
+		end
+	end
+	return party
 end
 
 --==============================================================================
@@ -551,8 +587,7 @@ function load_configs()
 		}
 	}
 	local loaded = config.load('data/settings.xml', defaults)
-	settings = settings or {assist={active=false,engage=false},disable={}}
-	settings.textBoxes = loaded.textBoxes
+	update_settings(loaded)
 	refresh_textBoxes()
 	
 	aliases = config.load('../shortcuts/data/aliases.xml')
@@ -569,7 +604,20 @@ function load_configs()
 	mobAbils = process_mabil_debuffs()
 	local msg = configs_loaded and 'Rel' or 'L'
 	configs_loaded = true
-	atc(15, msg..'oaded config files.')
+	atcc(262, msg..'oaded config files.')
+end
+
+function update_settings(loaded)
+	settings = settings or {}
+	for key,vals in pairs(loaded) do
+		settings[key] = settings[key] or {}
+		for vkey,val in pairs(vals) do
+			settings[key][vkey] = val
+		end
+	end
+	settings.assist = settings.assist or {}
+	settings.assist.active = settings.assist.active or false
+	settings.assist.engage = settings.assist.engage or false
 end
 
 function refresh_textBoxes()
@@ -607,7 +655,6 @@ end
 function process_mabil_debuffs()
 	local mabils = S{}
 	for abil_raw,debuffs in pairs(mabil_debuffs) do
-		--local aname = mabilName(abil_raw)
 		local aname = abil_raw:gsub('_',' '):capitalize()
 		mabils[aname] = S{}
 		for _,debuff in pairs(debuffs) do
@@ -615,20 +662,6 @@ function process_mabil_debuffs()
 		end
 	end
 	return mabils
-end
-
-function mabilName(rawName)
-	local parts = rawName:split('_')
-	local rebuilt = ''
-	for _,part in pairs(parts) do
-		if rawName:contains(part) then
-			if rebuilt:length() > 1 then
-				rebuilt = rebuilt..' '
-			end
-			rebuilt = rebuilt..formatName(part)
-		end
-	end
-	return rebuilt
 end
 
 --==============================================================================
@@ -664,6 +697,15 @@ end
 --						Misc.
 --======================================================================================================================
 
+--[[
+	Rounds a float to the given number of decimal places.
+	Note: math.round is only for rounding to the nearest integer
+--]]
+function round(num, dec_places)
+	local mult = 10^(dec_places or 0)
+	return math.floor(num * mult + 0.5) / mult
+end
+
 function help_text()
 	local t = '    '
 	local ac,cc,dc = 262,263,1
@@ -696,6 +738,7 @@ function help_text()
 		{'actioninfo [pos <x> <y> | on | off]','Moves character status info, or toggles display with no argument (default: on)'},
 		{'moveinfo [pos <x> <y> | on | off]','Moves movement status info, or toggles display with no argument (default: off)'},
 		{'monitored [pos <x> <y> | on | off]','Moves monitored player list, or toggles display with no argument (default: on)'},
+		{'disable curaga','In addons/HealBot/data/settings.xml:\n<settings>\n  <global>\n    ...\n    <disable>\n      <curaga>true</curaga>\n    </disable>\n    ...\n  </global>\n</settings>'},
 		{'help','Displays this help text'}
 	}
 	local acmds = {
