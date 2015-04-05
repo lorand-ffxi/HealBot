@@ -91,7 +91,7 @@ function isPerformingAction(moving)
 		resetBuffTimers('ALL', S{'Protect V','Shell V'})
 	elseif (buffActive('Sleep', 'Petrification', 'Charm', 'Terror', 'Lullaby', 'Stun', 'Silence', 'Mute') ~= nil) then
 		acting = true
-		status = 'is disabled'
+		status = ' is disabled'
 	end
 	
 	local player = windower.ffxi.get_player()

@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.9.3'
-_addon.lastUpdate = '2015.04.02'
+_addon.version = '2.9.5'
+_addon.lastUpdate = '2015.04.05'
 
 _libs = _libs or {}
 _libs.luau = _libs.luau or require('luau')
@@ -30,8 +30,6 @@ windower.register_event('load', function()
 	atcc(262,'Welcome to HealBot! To see a list of commands, type //hb help')
 	configs_loaded = false
 	load_configs()
-	
-	settings.assist = {active=false,engage=false}
 	
 	zone_enter = os.clock()-25
 	zone_wait = false
@@ -63,6 +61,11 @@ end)
 
 windower.register_event('zone change', function(new_id, old_id)
 	zone_enter = os.clock()
+end)
+
+windower.register_event('job change', function()
+	active = false
+	printStatus()
 end)
 
 windower.register_event('incoming chunk', handle_incoming_chunk)
@@ -155,7 +158,10 @@ function activate()
 	local player = windower.ffxi.get_player()
 	if player ~= nil then
 		maxCureTier = determineHighestCureTier()
-		active = (maxCureTier > 0)
+		if (maxCureTier == 0) then
+			disableCommand('cure', true)
+		end
+		active = true
 	end
 	printStatus()
 end

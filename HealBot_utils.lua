@@ -22,6 +22,12 @@ function processCommand(command,...)
 	elseif S{'stop','end','off'}:contains(command) then
 		active = false
 		printStatus()
+	elseif S{'disable'}:contains(command) then
+		if not validate(args, 1, 'Error: No argument specified for Disable') then return end
+		disableCommand(args[1]:lower(), true)
+	elseif S{'enable'}:contains(command) then
+		if not validate(args, 1, 'Error: No argument specified for Enable') then return end	
+		disableCommand(args[1]:lower(), false)
 	elseif S{'assist','as'}:contains(command) then
 		local cmd = args[1] and args[1]:lower() or (settings.assist.active and 'off' or 'resume')
 		if S{'off','end','false','pause'}:contains(cmd) then
@@ -274,6 +280,39 @@ function toggleMode(mode, cmd, msg, msgErr)
 	end
 end
 
+function disableCommand(cmd, disable)
+	local msg = ' is now '..(disable and 'disabled.' or 're-enabled.')
+	if S{'cure','cures','curing'}:contains(cmd) then
+		if (not disable) then
+			maxCureTier = determineHighestCureTier()
+			if (maxCureTier == 0) then
+				settings.disable.cure = true
+				atc(123,'Error: Unable to enable curing because you have no Cure spells available.')
+				return
+			end
+		end
+		settings.disable.cure = disable
+		atc('Curing'..msg)
+	elseif S{'na','heal_debuff','cure_debuff'}:contains(cmd) then
+		settings.disable.na = disable
+		atc('Removal of status effects'..msg)
+	elseif S{'buff','buffs','buffing'}:contains(cmd) then
+		settings.disable.buff = disable
+		atc('Buffing'..msg)
+	elseif S{'debuff','debuffs','debuffing'}:contains(cmd) then
+		settings.disable.debuff = disable
+		atc('Debuffing'..msg)
+	elseif S{'nuke','nukes','nuking'}:contains(cmd) then
+		settings.disable.nuke = disable
+		atc('Nuking'..msg)
+	elseif S{'ws','weaponskill','weaponskills','weaponskilling'}:contains(cmd) then
+		settings.disable.ws = disable
+		atc('Weaponskilling'..msg)
+	else
+		atc(123,'Error: Invalid argument for disable/enable: '..cmd)
+	end
+end
+
 function monitorCommand(cmd, pname)
 	if (pname == nil) then
 		atc('Error: No argument specified for '..cmd)
@@ -503,14 +542,17 @@ function import(path)
 end
 
 function load_configs()
-	local defaults = {}
-	defaults.textBoxes = {
-		actionQueue={x=-125,y=300,font='Arial',size=10,visible=true},
-		moveInfo={x=0,y=18,visible=false},
-		actionInfo={x=0,y=0,visible=true},
-		montoredBox={x=-150,y=600,font='Arial',size=10,visible=true}
+	local defaults = {
+		textBoxes = {
+			actionQueue={x=-125,y=300,font='Arial',size=10,visible=true},
+			moveInfo={x=0,y=18,visible=false},
+			actionInfo={x=0,y=0,visible=true},
+			montoredBox={x=-150,y=600,font='Arial',size=10,visible=true}
+		}
 	}
-	settings = config.load('data/settings.xml', defaults)
+	local loaded = config.load('data/settings.xml', defaults)
+	settings = settings or {assist={active=false,engage=false},disable={}}
+	settings.textBoxes = loaded.textBoxes
 	refresh_textBoxes()
 	
 	aliases = config.load('../shortcuts/data/aliases.xml')
@@ -630,14 +672,16 @@ function help_text()
 		{'on | off','Activate / deactivate HealBot (does not affect follow)'},
 		{'reload','Reload HealBot, resetting everything'},
 		{'refresh','Reloads settings XMLs in addons/HealBot/data/'},
-		{'mincure <number>','Sets the minimum cure spell tier to cast (default: 3)'},
-		{'reset [buffs | debuffs | both [on <player>]]','Resets the list of buffs/debuffs that have been detected, optionally for a single player'},
+		{'fcmd','Sets a player to follow, the distance to maintain, or toggles being active with no argument'},
 		{'buff <player> <spell>[, <spell>[, ...]]','Sets spell(s) to be maintained on the given player'},
 		{'cancelbuff <player> <spell>[, <spell>[, ...]]','Un-sets spell(s) to be maintained on the given player'},
 		{'bufflist <list name> <player>','Sets the given list of spells to be maintained on the given player'},
+		{'mincure <number>','Sets the minimum cure spell tier to cast (default: 3)'},
+		{'disable <action type>','Disables actions of a given type (cure, buff, na)'},
+		{'enable <action type>','Re-enables actions of a given type (cure, buff, na) if they were disabled'},
+		{'reset [buffs | debuffs | both [on <player>]]','Resets the list of buffs/debuffs that have been detected, optionally for a single player'},
 		{'ignore_debuff <player/always> <debuff>','Ignores when the given debuff is cast on the given player or everyone'},
 		{'unignore_debuff <player/always> <debuff>','Stops ignoring the given debuff for the given player or everyone'},
-		{'fcmd','Sets a player to follow, the distance to maintain, or toggles being active with no argument'},
 		{'ignore <player>','Ignores the given player/npc so they will not be healed'},
 		{'unignore <player>','Stops ignoring the given player/npc (=/= watch)'},
 		{'watch <player>','Monitors the given player/npc so they will be healed'},
@@ -664,7 +708,6 @@ function help_text()
 	}
 	
 	for _,tbl in pairs(cmds) do
-	--for cmd,desc in pairs(cmds) do
 		local cmd,desc = tbl[1],tbl[2]
 		local txta = cmd
 		if (acmds[cmd] ~= nil) then

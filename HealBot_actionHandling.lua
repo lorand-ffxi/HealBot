@@ -35,21 +35,21 @@ function getActionToPerform()
 	local queue = L({})
 	local action = {}
 	
-	while (not cureq:empty()) do
+	while (not settings.disable.cure) and (not cureq:empty()) do
 		local cact = cureq:pop()
 		queue:append(tostring(cact.action.en)..' → '..tostring(cact.name))
 		if (action.cure == nil) and (not isTooFar(cact.name)) then
 			action.cure = cact
 		end
 	end
-	while (not dbuffq:empty()) do
+	while (not settings.disable.na) and (not dbuffq:empty()) do
 		local dbact = dbuffq:pop()
 		queue:append(tostring(dbact.action.en)..' → '..tostring(dbact.name))
 		if (action.debuff == nil) and (not isTooFar(dbact.name)) and readyToCast(dbact.action) then
 			action.debuff = dbact
 		end
 	end
-	while (not buffq:empty()) do
+	while (not settings.disable.buff) and (not buffq:empty()) do
 		local bact = buffq:pop()
 		queue:append(tostring(bact.action.en)..' → '..tostring(bact.name))
 		if (action.buff == nil) and (not isTooFar(bact.name)) and readyToCast(bact.action) then
@@ -119,7 +119,7 @@ function getOffensiveAction()
 			-- return {action=getActionFor('Dia III'),name='<t>'}
 		-- end
 		
-		if (me.status == 1) and (me.vitals.tp > 999) and (settings.ws ~= nil) and (settings.ws.name ~= nil) then
+		if (not settings.disable.ws) and (me.status == 1) and (me.vitals.tp > 999) and (settings.ws ~= nil) and (settings.ws.name ~= nil) then
 			local sign = settings.ws.sign or '>'
 			local hp = settings.ws.hp or 0
 			local hp_ok = ((sign == '<') and (target.hpp <= hp)) or ((sign == '>') and (target.hpp >= hp))

@@ -10,6 +10,15 @@
         <black_cloud>
             <1>blindness</1>
         </black_cloud>
+        <calcifying_claw>
+            <1>petrification</1>
+        </calcifying_claw>
+        <deadening_haze>
+            <1>silence</1>
+        </deadening_haze>
+        <foul_waters>
+            <1>weight</1>
+        </foul_waters>
         <hane_fubuki>
             <1>poison</1>
         </hane_fubuki>
@@ -17,6 +26,11 @@
             <1>paralysis</1>
             <2>doom</2>
         </mandible_massacre>
+        <pestilent_plume>
+            <1>plague</1>
+            <2>blindness</2>
+            <3>Magic Def. Down</3>
+        </pestilent_plume>
         <poison_breath>
             <1>poison</1>
         </poison_breath>
