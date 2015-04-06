@@ -615,6 +615,7 @@ function update_settings(loaded)
 			settings[key][vkey] = val
 		end
 	end
+	settings.disable = settings.disable or {}
 	settings.assist = settings.assist or {}
 	settings.assist.active = settings.assist.active or false
 	settings.assist.engage = settings.assist.engage or false
@@ -709,7 +710,7 @@ end
 function help_text()
 	local t = '    '
 	local ac,cc,dc = 262,263,1
-	atc('HealBot Commands:':colorize(327))
+	atcc(262,'HealBot Commands:')
 	local cmds = {
 		{'on | off','Activate / deactivate HealBot (does not affect follow)'},
 		{'reload','Reload HealBot, resetting everything'},
