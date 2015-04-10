@@ -26,20 +26,6 @@ function get_active_buffs()
 	return activeBuffs
 end
 
-function buffActive(...)
-	local args = S{...}:map(string.lower)
-	local player = windower.ffxi.get_player()
-	if (player ~= nil) and (player.buffs ~= nil) then
-		for _,bid in pairs(player.buffs) do
-			local buff = res.buffs[bid]
-			if args:contains(buff.en:lower()) then
-				return buff
-			end
-		end
-	end
-	return nil
-end
-
 function checkOwnBuffs()
 	local player = windower.ffxi.get_player()
 	if (player ~= nil) and (player.buffs ~= nil) then
@@ -104,7 +90,7 @@ function getDebuffQueue()
 			if (removalSpellName ~= nil) then
 				if (info.attempted == nil) or ((now - info.attempted) >= 3) then
 					local spell = res.spells:with('en', removalSpellName)
-					if canCast(spell) and validTarget(spell, targ) then
+					if Assert.can_use(spell) and Assert.target_is_valid(spell, targ) then
 						local ign = ignored_debuffs[debuff]
 						if not ((ign ~= nil) and ((ign.all == true) or ((ign[targ] ~= nil) and (ign[targ] == true)))) then
 							dbq:enqueue('buff', spell, targ, debuff, ' ('..debuff..')')
@@ -153,7 +139,7 @@ function registerNewBuffName(targetName, bname, use)
 		atc('Unable to cast or invalid: '..spellName)
 		return
 	end
-	if not validTarget(action, target) then
+	if not Assert.target_is_valid(action, target) then
 		atc(target.name..' is an invalid target for '..action.en)
 		return
 	end
@@ -174,9 +160,6 @@ function registerNewBuffName(targetName, bname, use)
 	if (use) then
 		buffList[target.name][bname] = {['action']=action, ['maintain']=true, ['buff']=buff}
 		atc('Will maintain buff: '..action.en..' '..rarr..' '..target.name)
-		if (targetType == 'Self') then
-			checkOwnBuff(bname)
-		end
 	else
 		buffList[target.name][bname] = nil
 		atc('Will no longer maintain buff: '..action.en..' '..rarr..' '..target.name)
@@ -219,35 +202,15 @@ function getAction(actionName, target)
 	local me = windower.ffxi.get_player()
 	local action = nil
 	local spell = res.spells:with('en', actionName)
-	if (spell ~= nil) and canCast(spell) then
+	if (spell ~= nil) and Assert.can_use(spell) then
 		action = spell
 	elseif (target ~= nil) and (target.id == me.id) then
 		local abil = res.job_abilities:with('en', actionName)
-		if (abil ~= nil) then
+		if (abil ~= nil) and Assert.can_use(abil) then
 			action = abil
 		end
 	end
 	return action
-end
-
-function validTarget(action, target)
-	if (type(target) == 'string') then
-		target = getTarget(target)
-	end
-	local me = windower.ffxi.get_player()
-	local targetType = 'None'
-	if (target.in_alliance) then
-		if (target.in_party) then
-			if (me.name == target.name) then
-				targetType = 'Self'
-			else
-				targetType = 'Party'
-			end
-		else
-			targetType = 'Ally'
-		end
-	end
-	return S(action.targets):contains(targetType)
 end
 
 function getBuffNameForAction(action)

@@ -67,7 +67,7 @@ function processCommand(command,...)
 			table.remove(args, 1)
 			local argstr = table.concat(args,' ')
 			local wsname = formatSpellName(argstr)
-			local ws = res.weapon_skills:with('en', wsname)
+			local ws = getActionFor(wsname)
 			if (ws ~= nil) then
 				settings.ws.name = wsname
 				atc('Will now use '..wsname)
@@ -95,6 +95,34 @@ function processCommand(command,...)
 				atc("Will weaponskill when the target's HP is "..sign.." "..hp.."%")
 			else
 				atc(123,'Error: Invalid arguments for ws hp: '..tostring(args[2])..', '..tostring(args[3]))
+			end
+		end
+	elseif S{'spam','nuke'}:contains(command) then
+		local cmd = args[1] and args[1]:lower() or (settings.nuke.active and 'off' or 'on')
+		if S{'on','true'}:contains(cmd) then
+			settings.nuke.active = true
+			if (settings.nuke.name ~= nil) then
+				atc('Spell spamming is now on. Spell: '..settings.nuke.name)
+			else
+				atc('Spell spamming is now on. To set a spell to use: //hb spam use <spell>')
+			end
+		elseif S{'off','false'}:contains(cmd) then
+			settings.nuke.active = false
+			atc('Spell spamming is now off.')
+		elseif S{'use','set'}:contains(cmd) then
+			table.remove(args, 1)
+			local argstr = table.concat(args,' ')
+			local spell_name = formatSpellName(argstr)
+			local spell = getActionFor(spell_name)
+			if (spell ~= nil) then
+				if Assert.can_use(spell) then
+					settings.nuke.name = spell.en
+					atc('Will now spam '..settings.nuke.name)
+				else
+					atc(123,'Error: Unable to cast '..spell.en)
+				end
+			else
+				atc(123,'Error: Invalid spell name: '..spell_name)
 			end
 		end
 	elseif command == 'mincure' then
@@ -171,30 +199,30 @@ function processCommand(command,...)
 	elseif command == 'unignore_debuff' then
 		registerIgnoreDebuff(args, false)
 	elseif S{'follow','f'}:contains(command) then
-		local cmd = args[1] and args[1]:lower() or (follow and 'off' or 'resume')
+		local cmd = args[1] and args[1]:lower() or (settings.follow.active and 'off' or 'resume')
 		if S{'off','end','false','pause'}:contains(cmd) then
-			follow = false
+			settings.follow.active = false
 		elseif S{'distance', 'dist', 'd'}:contains(cmd) then
 			local dist = tonumber(args[2])
 			if (dist ~= nil) and (0 < dist) and (dist < 45) then
-				followDist = dist
-				atc('Follow distance set to '..followDist)
+				settings.follow.distance = dist
+				atc('Follow distance set to '..settings.follow.distance)
 			else
 				atc('Error: Invalid argument specified for follow distance')
 			end
 		elseif S{'resume'}:contains(cmd) then
-			if (followTarget ~= nil) then
-				follow = true
-				atc('Now following '..followTarget..'.')
+			if (settings.follow.target ~= nil) then
+				settings.follow.active = true
+				atc('Now following '..settings.follow.target..'.')
 			else
 				atc(123,'Error: Unable to resume follow - no target set')
 			end
 		else	--args[1] is guaranteed to have a value if this is reached
 			local pname = getPlayerName(args[1])
 			if (pname ~= nil) then
-				followTarget = pname
-				follow = true
-				atc('Now following '..followTarget..'.')
+				settings.follow.target = pname
+				settings.follow.active = true
+				atc('Now following '..settings.follow.target..'.')
 			else
 				atc(123,'Error: Invalid name provided as a follow target: '..tostring(args[1]))
 			end
@@ -398,15 +426,18 @@ function getPlayerName(name)
 	return nil
 end
 
-function getTarget(targetName)
-	local me = windower.ffxi.get_player()
-	local target = windower.ffxi.get_mob_by_name(targetName)
-	if (target == nil) then
-		if (targetName == '<t>') then
-			target = windower.ffxi.get_mob_by_target()
-		elseif S{'<me>','me'}:contains(targetName) then
-			target = windower.ffxi.get_mob_by_id(me.id)
-		end
+function getTarget(targ)
+	local target = nil
+	if targ and tonumber(targ) and (tonumber(targ) > 255) then
+		target = windower.ffxi.get_mob_by_id(tonumber(targ))
+	elseif targ and S{'<me>','me'}:contains(targ) then
+		target = windower.ffxi.get_mob_by_target('me')
+	elseif targ and (targ == '<t>') then
+		target = windower.ffxi.get_mob_by_target()
+	elseif targ and (type(targ) == 'string') then
+		target = windower.ffxi.get_mob_by_name(targ)
+	elseif targ and (type(targ) == 'table') then
+		target = targ
 	end
 	return target
 end
@@ -431,6 +462,17 @@ function getMainPartyList()
 		end
 	end
 	return party
+end
+
+--[[
+	Returns the resource information for the given spell or ability name
+--]]
+function getActionFor(actionName)
+	local spell = res.spells:with('en', actionName)
+	local abil = res.job_abilities:with('en', actionName)
+	local ws = res.weapon_skills:with('en', actionName)
+	
+	return spell or abil or ws or nil
 end
 
 --==============================================================================
@@ -510,7 +552,7 @@ function atcc(c,msg)
 end
 
 function atcd(c, msg)
-	if debugMode then atc(c, msg) end
+	if modes.debug then atc(c, msg) end
 end
 
 --[[
@@ -584,7 +626,8 @@ function load_configs()
 			moveInfo={x=0,y=18,visible=false},
 			actionInfo={x=0,y=0,visible=true},
 			montoredBox={x=-150,y=600,font='Arial',size=10,visible=true}
-		}
+		},
+		nuke = {name='Stone'}
 	}
 	local loaded = config.load('data/settings.xml', defaults)
 	update_settings(loaded)
@@ -615,10 +658,20 @@ function update_settings(loaded)
 			settings[key][vkey] = val
 		end
 	end
-	settings.disable = settings.disable or {}
+	settings.actionDelay = settings.actionDelay or 0.08
 	settings.assist = settings.assist or {}
 	settings.assist.active = settings.assist.active or false
 	settings.assist.engage = settings.assist.engage or false
+	settings.disable = settings.disable or {}
+	settings.follow = settings.follow or {}
+	settings.follow.delay = settings.follow.delay or 0.08
+	settings.follow.distance = settings.follow.distance or 3
+	settings.healing = settings.healing or {}
+	settings.healing.minCure = settings.healing.minCure or 3
+	settings.healing.minCuraga = settings.healing.minCuraga or 1
+	settings.healing.minWaltz = settings.healing.minWaltz or 2
+	settings.healing.minWaltzga = settings.healing.minWaltzga or 1
+	settings.nuke = settings.nuke or {}
 end
 
 function refresh_textBoxes()

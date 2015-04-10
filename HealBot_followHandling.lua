@@ -1,50 +1,27 @@
---==============================================================================
+--======================================================================================================================
 --[[
 	Author: Ragnarok.Lorand
 	HealBot follow handling functions
 --]]
---==============================================================================
-
-followTarget = nil
-follow = false
-followDist = 3
-followDelay = 0.08
+--======================================================================================================================
 
 local Pos = require('position')
 local quadrants = {NW={-1,1},SW={1,-1},NE={0,-1},SE={0,1}}
 local compass = {N=-math.pi/2,S=math.pi/2,E=0,W=math.pi,NW=-math.pi*3/4,NE=-math.pi*1/4,SW=math.pi*3/4,SE=math.pi*1/4}
--- local lastPos = Pos.new(0,0,0)
--- local posArrival = os.clock()
--- local wasIdle = true
 
-function needToMove(targetName)
+function needToMove(targ, dist)
 	local shouldMove = false
-	if targetName ~= nil then
-		local target = windower.ffxi.get_mob_by_name(targetName)
-		if target ~= nil then
-			shouldMove = math.sqrt(target.distance) > followDist
-		end
+	local target = getTarget(targ)
+	if (target ~= nil) then
+		shouldMove = math.sqrt(target.distance) > dist
 	end
-	
-	-- local pos = getPosition()
-	-- local now = os.clock()
-	-- if (lastPos:getDistance(pos) > 0.75) then
-		-- lastPos = pos
-		-- posArrival = now
-	-- end
-	
-	-- if (shouldMove) and (not wasIdle) and ((now-posArrival) > 1) then
-		-- return false
-	-- end
-	
-	-- wasIdle = not shouldMove
 	return shouldMove
 end
 
-function moveTowards(targetName)
-	local target = windower.ffxi.get_mob_by_name(targetName)
-	if target ~= nil then
-		windower.ffxi.run(getDirRadian(getPosition(), getPosition(targetName)))
+function moveTowards(targ)
+	local target = getTarget(targ)
+	if (target ~= nil) then
+		windower.ffxi.run(getDirRadian(getPosition(), getPosition(target)))
 	end
 end
 
@@ -52,11 +29,10 @@ end
 	Get the position of the entity with the given name, or own
 	position if no name is given.
 --]]
-function getPosition(name)
-	name = name and name or windower.ffxi.get_player().name
-	local mobChar = windower.ffxi.get_mob_by_name(name)
-	if mobChar then
-		return Pos.new(mobChar.x, mobChar.y, mobChar.z)
+function getPosition(targ)
+	local mob = getTarget(targ and targ or 'me')
+	if (mob ~= nil) then
+		return Pos.new(mob.x, mob.y, mob.z)
 	end
 	return nil
 end

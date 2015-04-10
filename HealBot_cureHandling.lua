@@ -10,12 +10,12 @@ function getCureQueue()
 	local hpTable = getMissingHps()		--Fetch a list of monitored players & the amounts of HP they're missing
 	local tierReqs = {}			--Initialize a table to store the cure tier required for each
 	
-	for name,p in pairs(hpTable) do				--Iterate through the missing HP table
-		if (p.hpp < 95) then				--Ignore players with HP > 95%
-			local tier = get_tier_for_hp(p.missing)	--Pick a cure tier based on the amount of HP missing
-			if (tier >= minCureTier) then		--Filter out players without enough HP missing
-				tierReqs[name] = tier	
-				local spell = get_cure_to_cast(p.missing, tier)	--Edit tier for MP and recast timers
+	for name,p in pairs(hpTable) do					--Iterate through the missing HP table
+		if (p.hpp < 95) then					--Ignore players with HP > 95%
+			local tier = CureUtils.get_cure_tier_for_hp(p.missing)
+			if (tier >= settings.healing.minCure) then	--Filter out players without enough HP missing
+				tierReqs[name] = tier
+				local spell = CureUtils.get_usable_cure(tier)	--Edit tier for MP and recast timers
 				if (spell ~= nil) then
 					cq:enqueue('cure', spell, name, p.hpp, ' ('..p.missing..')')	--Enqueue it
 				end
@@ -23,7 +23,7 @@ function getCureQueue()
 		end
 	end
 	--If enough members need cures, determine if a Curaga spell should be used
-	if (not settings.disable.curaga) and (sizeof(tierReqs) > 2) and (settings.maxCuragaTier > 0) then
+	if (not settings.disable.curaga) and (sizeof(tierReqs) > 2) and (settings.healing.maxCuraga > 0) then
 		local spell,targ = get_curaga_to_cast(tierReqs)		--Determine a target and Curaga to cast
 		if (spell ~= nil) then					--If Curaga can/should be cast...
 			local cgaq = ActionQueue.new()
@@ -45,8 +45,6 @@ function get_curaga_to_cast(tierReqs)
 			positions[c] = {['name']=name, ['pos']=getPosition(name)}
 			c = c + 1
 			tsum = tsum + tier
-		else
-			atc('Not in party: '..tostring(name))
 		end
 	end
 	if (c < 2) then return nil end
@@ -83,105 +81,19 @@ function get_curaga_to_cast(tierReqs)
 	end
 	
 	local cgaTier = round(tsum / c) - 1
-	cgaTier = (cgaTier > settings.maxCuragaTier) and settings.maxCuragaTier or cgaTier
+	cgaTier = (cgaTier > settings.healing.maxCuraga) and settings.healing.maxCuraga or cgaTier
 	cgaTier = (cgaTier < 1) and 1 or cgaTier
 	local player = windower.ffxi.get_player()
 	local recasts = windower.ffxi.get_spell_recasts()
 	local spell = res.spells:with('en', curaga_of_tier[cgaTier])
 	local rctime = recasts[spell.recast_id] or 0
-	local mpMult = cureCostMod()
+	local mpMult = CureUtils.get_multiplier()
 	local mpTooLow = (spell.mp_cost * mpMult) > player.vitals.mp
 	
 	if not ((rctime > 0) or mpTooLow) then
 		return spell, positions[fewestTooFar].name
 	end
 	return nil
-end
-
---[[
-	Returns the spell info for the tier of Cure that should/can be used based on
-	the amount of HP that the target is missing, the player's current MP, and
-	the player's recast timers.
---]]
-function get_cure_to_cast(hpMissing, baseTier)
-	local player = windower.ffxi.get_player()			--Get player info
-	local tier = baseTier						--Choose Cure tier by hp missing
-	if (tier < minCureTier) then return nil end			--Return nil if not enough is missing
-	
-	local recasts = windower.ffxi.get_spell_recasts()		--Get recast timers
-	local spell = res.spells:with('en', cure_of_tier[tier])		--Get info for chosen Cure spell
-	local rctime = recasts[spell.recast_id] or 0			--Get time left before chosen Cure can be cast
-	local mpMult = cureCostMod()					--Get the Cure cost multiplier
-	local mpTooLow = (spell.mp_cost * mpMult) > player.vitals.mp	--Determine if player has enough MP
-	
-	while (tier > 1) and (mpTooLow or (rctime > 0)) do		--Iterate while the chosen spell can't be cast
-		tier = tier - 1							--Decrement the tier
-		spell = res.spells:with('en', cure_of_tier[tier])		--Get info for the new tier of Cure
-		rctime = recasts[spell.recast_id] or 0				--Get time left before the new tier of Cure can be cast
-		mpTooLow = (spell.mp_cost * mpMult) > player.vitals.mp		--Determine if player has enough MP for the new Cure tier
-	end
-	return spell							--Return the spell info for the chosen Cure spell
-end
-
---[[
-	Returns the tier of Cure that should be used given the amount of HP that
-	the target is missing.
---]]
-function get_tier_for_hp(hpMissing)
-	local tier = settings.maxCureTier			--Set the Cure tier to the maximum castable tier
-	local potency = cure_potencies[tier]			--Retrieve the Cure potency for the given tier
-	local pdelta = potency - cure_potencies[tier-1]		--Calculate the potency difference between this tier and the next lowest tier
-	local threshold = potency - (pdelta * 0.5)		--Calculate the value to compare the amount of missing HP to
-	while hpMissing < threshold do				--Iterate while the current Cure tier is higher than necessary
-		tier = tier - 1						--Decrement the tier
-		if tier > 1 then					--If the tier is high enough
-			potency = cure_potencies[tier]				--Retrieve the Cure potency for the new tier
-			pdelta = potency - cure_potencies[tier-1]		--Recalculate the potency difference
-			threshold = potency - (pdelta * 0.5)			--Recalculate the comparison value
-		else							--Otherwise
-			threshold = 0						--Break out of the loop
-		end
-	end
-	return tier						--Return the tier of Cure that should be cast
-end
-
---[[
-	Returns the multiplier for the MP cost of Cure based on the player's job.
---]]
-function cureCostMod()
-	local p = windower.ffxi.get_player()			--Get player info
-	local mpMult = 1					--Default multiplier is 1
-	if S{p.job, p.sub_job}:contains('SCH') then		--If SCH is main or sub job
-		if buffActive('Light Arts','Addendum: White') then	--If Light Arts is active
-			mpMult = 0.9						--MP cost is 10% lower
-			if buffActive('Penury') then				--If Penury is active
-				mpMult = 0.5						--MP cost is halved
-			end
-		elseif buffActive('Dark Arts','Addendum: Black') then	--If Dark Arts is active
-			mpMult = 1.1						--MP cost is 10% higher
-		end
-	end
-	return mpMult						--Return the MP mutiplier
-end
-
---[[
-	Returns info about the player with the most HP missing from the given
-	set of players.
---]]
-function getMemberWithMostHpMissing(party)
-	local curee = {['missing']=0}				--Initialize table where info will be stored
-	for name,p in pairs(party) do				--Iterate through the given set of players
-		if (p.missing > curee.missing) and (p.hpp < 95) then	--If pc is missing more HP than the stored one
-			curee.name = name					--Store their name
-			curee.missing = p.missing				--And store the amount of HP they're missing
-			curee.hpp = p.hpp
-		end
-	end
-	if curee.missing > 0 then				--If someone is missing some HP
-		return curee						--Return their info
-	else							--Otherwise, if no one is missing HP
-		return nil						--Return nil
-	end
 end
 
 --[[
@@ -200,40 +112,6 @@ function getMissingHps()
 		hpTable[trg.name] = {['missing']=hpMissing, ['hpp']=trg.hpp}	--Store their info in the table
 	end
 	return hpTable							--Return the table with players' HP info
-end
-
---[[
-	Returns the tier of the highest potency Cure spell that the player is
-	currently able to cast.
---]]
-function determineHighestCureTiers()
-	local highestCure,highestCuraga = 0,0
-	for id, avail in pairs(windower.ffxi.get_spells()) do
-		if avail then
-			local spell = res.spells[id]
-			if S(cure_of_tier):contains(spell.en) then
-				if canCast(spell) then
-					local tier = tier_of_cure[spell.en]
-					if tier > highestCure then
-						highestCure = tier
-					end
-				end
-			elseif S(curaga_of_tier):contains(spell.en) then
-				if canCast(spell) then
-					local tier = tier_of_curaga[spell.en]
-					if tier > highestCuraga then
-						highestCuraga = tier
-					end
-				end
-			end
-		end
-	end
-	
-	settings.maxCureTier = highestCure
-	settings.maxCuragaTier = highestCuraga
-	if (settings.maxCureTier == 0) then
-		disableCommand('cure', true)
-	end
 end
 
 --======================================================================================================================
