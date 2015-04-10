@@ -772,6 +772,7 @@ function help_text()
 		{'buff <player> <spell>[, <spell>[, ...]]','Sets spell(s) to be maintained on the given player'},
 		{'cancelbuff <player> <spell>[, <spell>[, ...]]','Un-sets spell(s) to be maintained on the given player'},
 		{'bufflist <list name> <player>','Sets the given list of spells to be maintained on the given player'},
+		{'spam [use <spell> | <bool>]','Sets the spell to be spammed, or toggles being active (default: Stone, off) [Requires an assist target to activate]'},
 		{'mincure <number>','Sets the minimum cure spell tier to cast (default: 3)'},
 		{'disable <action type>','Disables actions of a given type (cure, buff, na)'},
 		{'enable <action type>','Re-enables actions of a given type (cure, buff, na) if they were disabled'},
