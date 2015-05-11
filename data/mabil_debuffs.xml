@@ -13,15 +13,29 @@
         <calcifying_claw>
             <1>petrification</1>
         </calcifying_claw>
+        <crepuscule_blade>
+            <1>curse</1>
+            <2>bio</2>
+            <3>blindness</3>
+        </crepuscule_blade>
+        <crippling_slam>
+            <1>paralysis</1>
+        </crippling_slam>
         <deadening_haze>
             <1>silence</1>
         </deadening_haze>
         <foul_waters>
             <1>weight</1>
         </foul_waters>
+        <frigid_shuffle>
+            <1>paralysis</1>
+        </frigid_shuffle>
         <hane_fubuki>
             <1>poison</1>
         </hane_fubuki>
+        <horror_cloud>
+            <1>slow</1>
+        </horror_cloud>
         <mandible_massacre>
             <1>paralysis</1>
             <2>doom</2>
@@ -45,5 +59,8 @@
         <wings_of_woe>
             <1>silence</1>
         </wings_of_woe>
+        <yawn>
+            <1>sleep</1>
+        </yawn>
     </global>
 </settings>

@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.9.7'
-_addon.lastUpdate = '2015.04.09'
+_addon.version = '2.9.8'
+_addon.lastUpdate = '2015.05.10'
 
 _libs = _libs or {}
 _libs.luau = _libs.luau or require('luau')
@@ -107,12 +107,14 @@ windower.register_event('prerender', function()
 					end
 				end
 			end
-			if not should_move and needToMove(settings.follow.target, settings.follow.distance) then
+			if (not should_move) and settings.follow.active and needToMove(settings.follow.target, settings.follow.distance) then
 				should_move = true
 				moveTowards(settings.follow.target)
 			end
-			if not should_move then
-				windower.ffxi.run(false)
+			if (not should_move) then
+				if settings.follow.active then
+					windower.ffxi.run(false)
+				end
 			else
 				moving = true
 			end

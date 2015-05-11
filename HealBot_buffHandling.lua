@@ -249,7 +249,7 @@ function registerDebuff(targetName, debuffName, gain)
 		local pmInfo = partyMemberInfo[targetName]
 		if (ignoreList ~= nil) and (pmInfo ~= nil) then
 			if ignoreList:contains(pmInfo.job) and ignoreList:contains(pmInfo.subjob) then
-				atc('Ignoring '..debuffName..' on '..targetName..' because of their job')
+				--atc('Ignoring '..debuffName..' on '..targetName..' because of their job')
 				return
 			end
 		end
