@@ -1,12 +1,13 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.9.8'
-_addon.lastUpdate = '2015.05.10'
+_addon.version = '2.9.9'
+_addon.lastUpdate = '2016.06.28'
 
-_libs = _libs or {}
-_libs.luau = _libs.luau or require('luau')
-_libs.queues = _libs.queues or require('queues')
+require('luau')
+require('lor/lor_utils')
+_libs.lor.req('all')
+_libs.req('queues')
 
 res = require('resources')
 config = require('config')
@@ -17,17 +18,15 @@ files = require('files')
 require 'HealBot_statics'
 require 'HealBot_utils'
 
-Assert =	require 'HB_Assertion'
-CureUtils =	require 'HB_CureUtils'
+Assert =	require('HB_Assertion')
+CureUtils =	require('HB_CureUtils')
 
-require 'HealBot_buffHandling'
-require 'HealBot_cureHandling'
-require 'HealBot_followHandling'
-require 'HealBot_packetHandling'
-require 'HealBot_actionHandling'
-require 'HealBot_queues'
-
-info = import('../info/info_share.lua')	--Load addons\info\info_share.lua for functions to print info from windower
+require('HealBot_buffHandling')
+require('HealBot_cureHandling')
+require('HealBot_followHandling')
+require('HealBot_packetHandling')
+require('HealBot_actionHandling')
+require('HealBot_queues')
 
 windower.register_event('load', function()
 	atcc(262,'Welcome to HealBot! To see a list of commands, type //hb help')
