@@ -48,6 +48,10 @@
         <poison_breath>
             <1>poison</1>
         </poison_breath>
+        <shearing_undulation>
+            <1>Magic Def. Down</1>
+            <2>Defense Down</2>
+        </shearing_undulation>
         <tsujikaze>
             <1>silence</1>
             <2>Defense Down</2>

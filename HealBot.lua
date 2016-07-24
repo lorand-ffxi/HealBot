@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.9.9'
-_addon.lastUpdate = '2016.06.28'
+_addon.version = '2.9.10'
+_addon.lastUpdate = '2016.07.16'
 
 require('luau')
 require('lor/lor_utils')
@@ -93,7 +93,7 @@ windower.register_event('prerender', function()
 	local moving = isMoving()					--Determine player's movement status
 	local acting = isPerformingAction(moving)			--Determine player's action status
 	local player = windower.ffxi.get_player()			--Retrieve player info from windower
-	if (player ~= nil) and S{0,1}:contains(player.status) then	--Assert player is idle or engaged
+	if (player ~= nil) and S{0,1,5}:contains(player.status) then	--0: idle, 1: engaged, 5: chocobo
 		Assert.follow_target_exists()				--Try to prevent autorun problems
 		if (settings.follow.active or settings.assist.active) and ((now - lastMoveCheck) > settings.follow.delay) then
 			local should_move = false
