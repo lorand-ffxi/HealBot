@@ -50,9 +50,12 @@ be detected in the future.
 
 Place the healBot folder in .../Windower/addons/
 
-To load healBot: `//lua load healbot`
-To unload healBot: `//hb unload`
-To reload healBot: `//hb reload`
+* To load healBot: `//lua load healbot`
+* To unload healBot: `//hb unload`
+* To reload healBot: `//hb reload`
+
+### Command List
+**Note:** Shortcut commands below are highlighted in **bold** (e.g., **f** is a shortcut for **f**ollow)
 
 | Command | Action |
 | --- | --- |
@@ -70,14 +73,10 @@ To reload healBot: `//hb reload`
 | //hb cancelbuff <t> spellName | Stop maintaining the buff spellName on current target |
 | //hb bufflist listName charName | Maintain the buffs in the given list of buffs on player charName |
 | //hb bufflist listName <t> | Maintain the buffs in the given list of buffs on current target |
-| //hb follow charName | Follow player charName |
-| //hb f charName | Follow player charName |
-| //hb follow <t> | Follow current target |
-| //hb f <t> | Follow current target |
-| //hb follow off | Stop following |
-| //hb f off | Stop following |
-| //hb follow dist # | Set the follow distance to # |
-| //hb f dist # | Set the follow distance to # |
+| //hb **f**ollow charName | Follow player charName |
+| //hb **f**ollow <t> | Follow current target |
+| //hb **f**ollow off | Stop following |
+| //hb **f**ollow dist # | Set the follow distance to # |
 | //hb ignore charName | Ignore player charName so they won't be healed |
 | //hb unignore charName | Stop ignoring player charName (note: will not watch a player that would not otherwise be watched) |
 | //hb watch charName | Watch player charName so they will be healed |
