@@ -13,7 +13,7 @@ function getActionToPerform()
 	local action = {}
 	
 	if (not settings.disable.cure) then
-		local cureq = getCureQueue()
+		local cureq = CureUtils.get_cure_queue()
 		while (not cureq:empty()) do
 			local cact = cureq:pop()
 			queue:append(tostring(cact.action.en)..' → '..tostring(cact.name))
@@ -23,7 +23,7 @@ function getActionToPerform()
 		end
 	end
 	if (not settings.disable.na) then
-		local dbuffq = getDebuffQueue()
+		local dbuffq = buffs.getDebuffQueue()
 		while (not dbuffq:empty()) do
 			local dbact = dbuffq:pop()
 			queue:append(tostring(dbact.action.en)..' → '..tostring(dbact.name))
@@ -33,7 +33,7 @@ function getActionToPerform()
 		end
 	end
 	if (not settings.disable.buff) then
-		local buffq = getBuffQueue()
+		local buffq = buffs.getBuffQueue()
 		while (not buffq:empty()) do
 			local bact = buffq:pop()
 			queue:append(tostring(bact.action.en)..' → '..tostring(bact.name))

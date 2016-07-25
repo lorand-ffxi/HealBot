@@ -7,6 +7,8 @@
 --          Input Handling Functions
 --==============================================================================
 
+utils = {}
+
 function processCommand(command,...)
     command = command and command:lower() or 'help'
     local args = {...}
@@ -18,7 +20,7 @@ function processCommand(command,...)
     elseif command == 'refresh' then
         load_configs()
     elseif S{'start','on'}:contains(command) then
-        activate()
+        hb.activate()
     elseif S{'stop','end','off'}:contains(command) then
         active = false
         printStatus()
@@ -129,8 +131,17 @@ function processCommand(command,...)
         if not validate(args, 1, 'Error: No argument specified for minCure') then return end
         local val = tonumber(args[1])
         if (val ~= nil) and (1 <= val) and (val <= 6) then
-            minCureTier = val
-            atc('Minimum cure tier set to '..minCureTier)
+            settings.healing.min.cure = val
+            atc('Minimum cure tier set to '..val)
+        else
+            atc('Error: Invalid argument specified for minCure')
+        end
+    elseif command == 'mincuraga' then
+        if not validate(args, 1, 'Error: No argument specified for minCure') then return end
+        local val = tonumber(args[1])
+        if (val ~= nil) and (1 <= val) and (val <= 6) then
+            settings.healing.min.curaga = val
+            atc('Minimum curaga tier set to '..val)
         else
             atc('Error: Invalid argument specified for minCure')
         end
@@ -159,47 +170,29 @@ function processCommand(command,...)
                 return
             end
         end
-        
+        resetTarget = resetTarget or 'ALL' 
+        local rtmsg = resetTarget or 'all monitored players'
         if b then
-            if (resetTarget ~= nil) then
-                resetBuffTimers(resetTarget)
-                atc('Buffs registered for '..resetTarget..' were reset.')
-            else
-                for player,_ in pairs(buffList) do
-                    resetBuffTimers(player)
-                end
-                atc('Buffs registered for all monitored players were reset.')
-            end
+            buffs.resetBuffTimers(resetTarget)
+            atc('Buff timers for %s were reset.':format(rtmsg))
         end
         if d then
-            if (resetTarget ~= nil) then
-                debuffList[resetTarget]= {}
-                atc('Debuffs registered for '..resetTarget..' were reset.')
-            else
-                debuffList = {}
-                atc('Debuffs registered for all monitored players were reset.')
-            end
+            buffs.resetDebuffTimers(resetTarget)
+            atc('Debuffs detected for %s were reset.':format(rtmsg))
         end
     elseif command == 'buff' then
-        registerNewBuff(args, true)
+        buffs.registerNewBuff(args, true)
     elseif command == 'cancelbuff' then
-        registerNewBuff(args, false)
+        buffs.registerNewBuff(args, false)
     elseif command == 'bufflist' then
         if not validate(args, 1, 'Error: No argument specified for BuffList') then return end
-        local blist = defaultBuffs[args[1]]
-        if blist ~= nil then
-            for _,buff in pairs(blist) do
-                registerNewBuff({args[2], buff}, true)
-            end
-        else
-            atc('Error: Invalid argument specified for BuffList: '..args[1])
-        end
+        utils.apply_bufflist(args)
     elseif command == 'bufflists' then
-        pprint(defaultBuffs)
+        pprint(hb_config.buff_lists)
     elseif command == 'ignore_debuff' then
-        registerIgnoreDebuff(args, true)
+        buffs.registerIgnoreDebuff(args, true)
     elseif command == 'unignore_debuff' then
-        registerIgnoreDebuff(args, false)
+        buffs.registerIgnoreDebuff(args, false)
     elseif S{'follow','f'}:contains(command) then
         local cmd = args[1] and args[1]:lower() or (settings.follow.active and 'off' or 'resume')
         if S{'off','end','false','pause'}:contains(cmd) then
@@ -232,7 +225,7 @@ function processCommand(command,...)
     elseif S{'ignore', 'unignore', 'watch', 'unwatch'}:contains(command) then
         monitorCommand(command, args[1])
     elseif command == 'ignoretrusts' then
-        toggleMode('ignoreTrusts', args[1], 'Ignoring of Trust NPCs', 'IgnoreTrusts')
+        utils.toggleX(settings, 'ignoreTrusts', args[1], 'Ignoring of Trust NPCs', 'IgnoreTrusts')
     elseif command == 'packetinfo' then
         toggleMode('showPacketInfo', args[1], 'Packet info display', 'PacketInfo')
     elseif command == 'moveinfo' then
@@ -283,6 +276,26 @@ function processCommand(command,...)
     end
 end
 
+
+function utils.apply_bufflist(args)
+    local job = windower.ffxi.get_player().main_job
+    local bl_name = args[1]
+    local bl_target = args[2]
+    if bl_target == nil and bl_name == 'self' then
+        bl_target = 'me'
+    end
+    local buff_list = table.get_nested_value(hb_config.buff_lists, {job, job:lower()}, bl_name)
+    buff_list = buff_list or hb_config.buff_lists[bl_name]
+    if buff_list ~= nil then
+        for _,buff in pairs(buff_list) do
+            buffs.registerNewBuff({bl_target, buff}, true)
+        end
+    else
+        atc('Error: Invalid argument specified for BuffList: '..bl_name)
+    end
+end
+
+
 function posCommand(boxName, args)
     if (args[1] == nil) or (args[2] == nil) then return false end
     local cmd = args[1]:lower()
@@ -315,21 +328,26 @@ function toggleVisible(boxName, cmd)
     end
 end
 
-function toggleMode(mode, cmd, msg, msgErr)
-    if (modes[mode] == nil) then
-        atc(123,'Error: Invalid mode to toggle: '..tostring(mode))
+function utils.toggleX(tbl, field, cmd, msg, msgErr)
+    if (tbl[field] == nil) then
+        atcf(123, 'Error: Invalid mode to toggle: %s', field)
         return
     end
-    cmd = cmd and cmd:lower() or (modes[mode] and 'off' or 'on')
+    cmd = cmd and cmd:lower() or (tbl[field] and 'off' or 'on')
     if (cmd == 'on') then
-        modes[mode] = true
+        tbl[field] = true
         atc(msg..' is now on.')
     elseif (cmd == 'off') then
-        modes[mode] = false
+        tbl[field] = false
         atc(msg..' is now off.')
     else
         atc(123,'Invalid argument for '..msgErr..': '..cmd)
     end
+end
+
+function toggleMode(mode, cmd, msg, msgErr)
+    utils.toggleX(modes, mode, cmd, msg, msgErr)
+    _libs.lor.debug = modes.debug
 end
 
 function disableCommand(cmd, disable)
@@ -457,7 +475,7 @@ function getPartyMember(name)
     return nil
 end
 
-function getMainPartyList()
+function utils.getMainPartyList()
     local pt = windower.ffxi.get_party()
     local pty = {pt.p0,pt.p1,pt.p2,pt.p3,pt.p4,pt.p5}
     local party = S{}
@@ -487,7 +505,7 @@ end
 function formatSpellName(text)
     if (type(text) ~= 'string') or (#text < 1) then return nil end
     
-    local fromAlias = aliases[text]
+    local fromAlias = hb_config.aliases[text]
     if (fromAlias ~= nil) then
         return fromAlias
     end
@@ -539,73 +557,13 @@ end
 --          Output Handling Functions
 --==============================================================================
 
-function atc(c, msg)
-    if (type(c) == 'string') and (msg == nil) then
-        msg = c
-        c = 0
-    end
-    windower.add_to_chat(c, '[HealBot]'..msg)
-end
-
-function atcc(c,msg)
-    if (type(c) == 'string') and (msg == nil) then
-        msg = c
-        c = 0
-    end
-    local hbmsg = '[HealBot]'..msg
-    windower.add_to_chat(0, hbmsg:colorize(c))
-end
-
-function atcd(c, msg)
-    if modes.debug then atc(c, msg) end
-end
-
---[[
-    Convenience wrapper for echoing a message in the Windower console.
---]]
-function echo(msg)
-    if (msg ~= nil) then
-        windower.send_command('echo [HealBot]'..msg)
-    end
-end
-
-function print_table_keys(t, prefix)
-    prefix = prefix or ''
-    local msg = ''
-    for k,v in pairs(t) do
-        if #msg > 0 then msg = msg..', ' end
-        msg = msg..k
-    end
-    if #msg == 0 then msg = '(none)' end
-    atc(prefix..msg)
-end
-
-function printPairs(tbl, prefix)
-    if prefix == nil then prefix = '' end
-    for k,v in pairs(tbl) do
-        atc(prefix..tostring(k)..' : '..tostring(v))
-        if type(v) == 'table' then
-            printPairs(v, prefix..'    ')
-        end
-    end
-end
-
 function printStatus()
     windower.add_to_chat(1, 'HealBot is now '..(active and 'active' or 'off')..'.')
 end
 
-
 --==============================================================================
 --          Initialization Functions
 --==============================================================================
-
-function import(path)
-    local fcontents = files.read(path)
-    if (fcontents ~= nil) then
-        return loadstring(fcontents)()
-    end
-    return nil
-end
 
 function load_configs()
     local defaults = {
@@ -615,24 +573,36 @@ function load_configs()
             actionInfo={x=0,y=0,visible=true},
             montoredBox={x=-150,y=600,font='Arial',size=10,visible=true}
         },
-        nuke = {name='Stone'}
+        nuke = {name='Stone'},
+        healing = {min={cure=3,curaga=1,waltz=2,waltzga=1},curaga_min_targets=2},
+        disable = {curaga=false},
+        ignoreTrusts=true
     }
     local loaded = config.load('data/settings.xml', defaults)
     update_settings(loaded)
     refresh_textBoxes()
     
-    aliases = config.load('../shortcuts/data/aliases.xml')
-    mabil_debuffs = config.load('data/mabil_debuffs.xml')
-    defaultBuffs = config.load('data/buffLists.xml')
+    local cure_potency_defaults = {
+        cure = {94,207,469,880,1110,1395},  curaga = {150,313,636,1125,1510},
+        waltz = {157,325,581,887,1156},     waltzga = {160,521}
+    }
+    local buff_lists_defaults = {       self = {'Haste II','Refresh II'},
+        whm = {self={'Haste','Refresh'}}, rdm = {self={'Haste II','Refresh II'}}
+    }
+    hb_config = {
+        aliases = config.load('../shortcuts/data/aliases.xml'),
+        mabil_debuffs = config.load('data/mabil_debuffs.xml'),
+        buff_lists = config.load('data/buffLists.xml', buff_lists_defaults),
+        priorities = config.load('data/priorities.xml'),
+        cure_potency = config.load('data/cure_potency.xml', cure_potency_defaults)
+    }
+    hb_config.priorities.players =        hb_config.priorities.players or {}
+    hb_config.priorities.jobs =           hb_config.priorities.jobs or {}
+    hb_config.priorities.status_removal = hb_config.priorities.status_removal or {}
+    hb_config.priorities.buffs =          hb_config.priorities.buffs or {}
+    hb_config.priorities.default =        hb_config.priorities.default or 5
     
-    priorities = config.load('data/priorities.xml')
-    priorities.players = priorities.players or {}
-    priorities.jobs = priorities.jobs or {}
-    priorities.status_removal = priorities.status_removal or {}
-    priorities.buffs = priorities.buffs or {}
-    priorities.default = priorities.default or 5
-    
-    mobAbils = process_mabil_debuffs()
+    hb_config.mobAbils = process_mabil_debuffs()
     local msg = configs_loaded and 'Rel' or 'L'
     configs_loaded = true
     atcc(262, msg..'oaded config files.')
@@ -640,26 +610,24 @@ end
 
 function update_settings(loaded)
     settings = settings or {}
-    for key,vals in pairs(loaded) do
-        settings[key] = settings[key] or {}
-        for vkey,val in pairs(vals) do
-            settings[key][vkey] = val
+    for key,val in pairs(loaded) do
+        if istable(val) then
+            settings[key] = settings[key] or {}
+            for skey,sval in pairs(val) do
+                settings[key][skey] = sval
+            end
+        else
+            settings[key] = settings[key] or val
         end
     end
-    settings.actionDelay = settings.actionDelay or 0.08
-    settings.assist = settings.assist or {}
-    settings.assist.active = settings.assist.active or false
-    settings.assist.engage = settings.assist.engage or false
-    settings.disable = settings.disable or {}
-    settings.follow = settings.follow or {}
-    settings.follow.delay = settings.follow.delay or 0.08
-    settings.follow.distance = settings.follow.distance or 3
-    settings.healing = settings.healing or {}
-    settings.healing.minCure = settings.healing.minCure or 3
-    settings.healing.minCuraga = settings.healing.minCuraga or 1
-    settings.healing.minWaltz = settings.healing.minWaltz or 2
-    settings.healing.minWaltzga = settings.healing.minWaltzga or 1
-    settings.nuke = settings.nuke or {}
+    table.update_if_not_set(settings, {
+        actionDelay = 0.08,
+        assist = {active = false, engage = false},
+        disable = {},
+        follow = {delay = 0.08, distance = 3},
+        healing = {minCure = 3, minCuraga = 1, minWaltz = 2, minWaltzga = 1},
+        nuke = {}
+    })
 end
 
 function refresh_textBoxes()
@@ -696,7 +664,7 @@ end
 
 function process_mabil_debuffs()
     local mabils = S{}
-    for abil_raw,debuffs in pairs(mabil_debuffs) do
+    for abil_raw,debuffs in pairs(hb_config.mabil_debuffs) do
         local aname = abil_raw:gsub('_',' '):capitalize()
         mabils[aname] = S{}
         for _,debuff in pairs(debuffs) do

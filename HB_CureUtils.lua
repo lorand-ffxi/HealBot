@@ -1,224 +1,303 @@
---======================================================================================================================
+--==============================================================================
 --[[
-	Author: Ragnarok.Lorand
-	HealBot cure handling functions
-	
-	Currently transitioning between HealBot_cureHandling.lua and this file.  This one will fully replace it soon.
+    Author: Ragnarok.Lorand
+    HealBot cure handling functions
+    
+    Currently transitioning between HealBot_cureHandling.lua and this file.
+    This one will fully replace it soon.
 --]]
---======================================================================================================================
+--==============================================================================
 
 local cu = {}
 
---======================================================================================================================
---					Static Cure Information
---======================================================================================================================
+--==============================================================================
+--                  Static Cure Information
+--==============================================================================
 cu.cure = {
-	[1] = {id=1,	en='Cure',		res=res.spells[1],		hp=94},
-	[2] = {id=2,	en='Cure II',		res=res.spells[2],		hp=207},
-	[3] = {id=3,	en='Cure III',		res=res.spells[3],		hp=469},
-	[4] = {id=4,	en='Cure IV',		res=res.spells[4],		hp=880},
-	[5] = {id=5,	en='Cure V',		res=res.spells[5],		hp=1110},
-	[6] = {id=6,	en='Cure VI',		res=res.spells[6],		hp=1395}
+    [1] = {id=1,    en='Cure',              res=res.spells[1]},
+    [2] = {id=2,    en='Cure II',           res=res.spells[2]},
+    [3] = {id=3,    en='Cure III',          res=res.spells[3]},
+    [4] = {id=4,    en='Cure IV',           res=res.spells[4]},
+    [5] = {id=5,    en='Cure V',            res=res.spells[5]},
+    [6] = {id=6,    en='Cure VI',           res=res.spells[6]}
 }
 cu.curaga = {
-	[1] = {id=7,	en='Curaga',		res=res.spells[7],		hp=150},
-	[2] = {id=8,	en='Curaga II',		res=res.spells[8],		hp=313},
-	[3] = {id=9,	en='Curaga III',	res=res.spells[9],		hp=636},
-	[4] = {id=10,	en='Curaga IV',		res=res.spells[10],		hp=1125},
-	[5] = {id=11,	en='Curaga V',		res=res.spells[11],		hp=1510}
+    [1] = {id=7,    en='Curaga',            res=res.spells[7]},
+    [2] = {id=8,    en='Curaga II',         res=res.spells[8]},
+    [3] = {id=9,    en='Curaga III',        res=res.spells[9]},
+    [4] = {id=10,   en='Curaga IV',         res=res.spells[10]},
+    [5] = {id=11,   en='Curaga V',          res=res.spells[11]}
 }
 cu.waltz = {
-	[1] = {id=190,	en='Curing Waltz',	res=res.job_abilities[190],	hp=157},
-	[2] = {id=191,	en='Curing Waltz II',	res=res.job_abilities[191],	hp=325},
-	[3] = {id=192,	en='Curing Waltz III',	res=res.job_abilities[192],	hp=581},
-	[4] = {id=193,	en='Curing Waltz IV',	res=res.job_abilities[193],	hp=887},
-	[5] = {id=311,	en='Curing Waltz V',	res=res.job_abilities[311],	hp=1156},
+    [1] = {id=190,  en='Curing Waltz',      res=res.job_abilities[190]},
+    [2] = {id=191,  en='Curing Waltz II',   res=res.job_abilities[191]},
+    [3] = {id=192,  en='Curing Waltz III',  res=res.job_abilities[192]},
+    [4] = {id=193,  en='Curing Waltz IV',   res=res.job_abilities[193]},
+    [5] = {id=311,  en='Curing Waltz V',    res=res.job_abilities[311]}
 }
 cu.waltzga = {
-	[1] = {id=195,	en='Divine Waltz',	res=res.job_abilities[195],	hp=160},
-	[2] = {id=262,	en='Divine Waltz II',	res=res.job_abilities[262],	hp=521},
+    [1] = {id=195,  en='Divine Waltz',      res=res.job_abilities[195]},
+    [2] = {id=262,  en='Divine Waltz II',   res=res.job_abilities[262]}
 }
 
---======================================================================================================================
---						Helper Functions
---======================================================================================================================
-
-local function get_recast_timers(waltz)
-	if waltz then
-		return windower.ffxi.get_ability_recasts()
-	else
-		return windower.ffxi.get_spell_recasts()
-	end
+function cu.init_cure_potencies()
+    for spell_group,_ in pairs(hb_config.cure_potency) do
+        for spell_tier,_ in pairs(cu[spell_group]) do
+            cu[spell_group][spell_tier].hp = hb_config.cure_potency[spell_group][spell_tier]
+        end
+    end
 end
 
-function cu.get_multiplier(waltz)
-	local mult = 1
-	if waltz then
-		if Assert.buff_active('Trance') then
-			mult = 0
-		end
-	else
-		local p = windower.ffxi.get_player()
-		if (p.job == 'BLM') and Assert.buff_active('Manafont') then
-			mult = 0
-		elseif Assert.buff_active('Manawell') then
-			mult = 0
-		elseif S{p.job, p.sub_job}:contains('SCH') then
-			if Assert.buff_active('Light Arts','Addendum: White') then
-				mult = Assert.buff_active('Penury') and 0.5 or 0.9
-			elseif Assert.buff_active('Dark Arts','Addendum: Black') then
-				mult = 1.1
-			end
-		end
-	end
-	return mult
+
+function cu.getDangerLevel(hpp)
+    if (hpp <= 20) then
+        return 3
+    elseif (hpp <= 40) then
+        return 2
+    elseif (hpp <= 60) then
+        return 1
+    end
+    return 0
 end
 
---======================================================================================================================
---						Tier Determining Functions
---======================================================================================================================
 
 --[[
-	Determines the tier of single target cure that should be used for the given amount of missing HP.
-	Works for both Cure spells and Curing Waltzes.
+    Returns a table with party members and how much hp they are missing
 --]]
-function cu.get_cure_tier_for_hp(hp_missing, waltz)
-	local ctable = waltz and cu.waltz or cu.cure
-	local tier = waltz and settings.healing.maxWaltz or settings.healing.maxCure
-	while (tier > 1) do
-		local potency = ctable[tier].hp			--Retrieve the potency for the current tier
-		local pdelta = potency - ctable[tier].hp	--Calculate the difference from the next lowest tier
-		local threshold = potency - (pdelta * 0.5)	--Calculate the value to compare to hp_missing
-		
-		if (hp_missing < threshold) then		--If the current tier is higher than necessary
-			tier = tier - 1				--Then decrement the tier
-		else						--Otherwise
-			break					--Use the current tier
-		end
-	end
-	return tier						--Return the tier that should be used
+function cu.get_missing_hps()
+    local targets = hb.getMonitoredPlayers()
+    local hpTable = {}
+    for _,trg in pairs(targets) do
+        local hpMissing = 0
+        if (trg.hp ~= nil) then
+            hpMissing = math.ceil((trg.hp/(trg.hpp/100))-trg.hp)
+        else --If the player doesn't have a hp field, guesstimate how much they are missing
+            hpMissing = 1500 - math.ceil((trg.hpp/100)*1500)
+        end
+        hpTable[trg.name] = {['missing']=hpMissing, ['hpp']=trg.hpp}
+    end
+    return hpTable
 end
+
+
+function cu.injured_pt_members()
+    local party_members = utils.getMainPartyList()
+    local injured = {}
+    for _,trg in pairs(hb.getMonitoredPlayers()) do
+        if trg.hpp < 95 and party_members:contains(trg.name) then
+            local _hp = trg.hp or 1500   --Guesstimate if no value available
+            local _missing
+            if trg.hp ~= nil then
+                _missing = math.ceil(((_hp/(trg.hpp/100))) - _hp)
+            else
+                _missing = _hp - math.ceil((trg.hpp/100)*_hp)
+            end
+            injured[trg.name] = {
+                name = trg.name, hp = _hp, missing = _missing, hpp = trg.hpp,
+                pos = getPosition(trg.name),
+                danger = cu.getDangerLevel(trg.hpp)
+            }
+        end
+    end
+    return injured
+end
+
+
+function cu.get_weighted_curaga_hp(members_info, names)
+    local hp, missing, c = 0, 0, 0
+    local name_set = S(names)
+    for name, minfo in pairs(members_info) do
+        if name_set:contains(name) then
+            local d = minfo.danger + 1
+            missing = missing + (minfo.missing * d)
+            hp = hp + (minfo.hp * d)
+            c = c + d
+        end
+    end
+    return missing / c, hp / c
+end
+
+
+function cu.pick_best_curaga_possibility()
+    local too_few = settings.healing.curaga_min_targets
+    local members = cu.injured_pt_members()
+    local member_count = sizeof(members)
+    if member_count < too_few then return nil end
+    local best = {}
+    local coverage, distances = LT(), LT()
+    for memberA, a in pairs(members) do
+        coverage[memberA] = LT{memberA}
+        distances[memberA] = LT()
+        for memberB, b in pairs(members) do
+            if memberA ~= memberB then
+                local dist = a.pos:getDistance(b.pos)
+                distances[memberA]:insert(dist)
+                if dist < 10 then
+                    coverage[memberA]:insert(memberB)
+                end
+            end
+        end
+        local furthest = distances[memberA]:max()
+        local avg_dist = distances[memberA]:sum() / distances[memberA]:size()
+        local farA = {memberA, furthest}
+        local avgA = {memberA, avg_dist}
+        local covA = {memberA, coverage[memberA]}
+        best.far = best.far or farA
+        best.far = (furthest < best.far[2]) and farA or best.far
+        best.avg = best.avg or avgA
+        best.avg = (avg_dist < best.avg[2]) and avgA or best.avg
+        best.cov = best.cov or covA
+        best.cov = (coverage[memberA]:size() > best.cov[2]:size()) and covA or best.cov
+        if furthest < 10 then break end    --Everyone is close enough
+    end
+    if best.cov[2]:size() < too_few then return nil end
+    local best_cov_count = best.cov[2]:size()
+    local best_target
+    if coverage[best.far[1]]:size() == best_cov_count then
+        best_target = best.far[1]
+    elseif coverage[best.avg[1]]:size() == best_cov_count then
+        best_target = best.avg[1]
+    else
+        best_target = best.cov[1]
+    end
+    local w_missing, w_hpp = cu.get_weighted_curaga_hp(members, coverage[best_target])
+    local tier = cu.get_cure_tier_for_hp(w_missing, 'curaga')
+    local min_hpp = 100
+    for _,name in pairs(coverage[best_target]) do
+        min_hpp = min(min_hpp, members[name].hpp)
+    end
+    min_hpp = min_hpp * 0.7 --add extra weight
+    local target = {name=best_target, missing=w_missing, hpp=min_hpp}
+    return cu.get_usable_cure(tier, 'curaga'), target
+end
+
+
+function cu.get_cure_queue()
+    local cq = ActionQueue.new()
+    local hp_table = cu.get_missing_hps()
+    for name,p in pairs(hp_table) do
+        if p.hpp < 95 then
+            local tier = cu.get_cure_tier_for_hp(p.missing, 'cure')
+            if tier >= settings.healing.min.cure then
+                local spell = cu.get_usable_cure(tier, 'cure')
+                if spell ~= nil then
+                    cq:enqueue('cure', spell, name, p.hpp, ' (%s)':format(p.missing))
+                end
+            end
+        end
+    end
+    if (not settings.disable.curaga) and (settings.healing.max.curaga > 0) then
+        local spell, p = cu.pick_best_curaga_possibility()
+        if spell ~= nil then
+            cq:enqueue('cure', spell, p.name, p.hpp, ' (%s)':format(p.missing))
+        end
+    end
+    return cq:getQueue()
+end
+
+
+function cu.get_multiplier(cure_type)
+    local mult = 1
+    if cure_type:startswith('waltz') then
+        if Assert.buff_active('Trance') then
+            mult = 0
+        end
+    else --it starts with 'cur'
+        local p = windower.ffxi.get_player()
+        if (p.job == 'BLM') and Assert.buff_active('Manafont') then
+            mult = 0
+        elseif Assert.buff_active('Manawell') then
+            mult = 0
+        elseif S{p.job, p.sub_job}:contains('SCH') then
+            if Assert.buff_active('Light Arts','Addendum: White') then
+                mult = Assert.buff_active('Penury') and 0.5 or 0.9
+            elseif Assert.buff_active('Dark Arts','Addendum: Black') then
+                mult = 1.1
+            end
+        end
+    end
+    return mult
+end
+
 
 --[[
-	Determines the tier of single target cure that should be used given the player's current state.
-	Works for both Cure spells and Curing Waltzes.
+    Determines the tier of cure_type to use for the given amount of missing HP.
 --]]
-function cu.get_usable_cure(orig_tier, waltz)
-	local minTier = waltz and settings.healing.minWaltz or settings.healing.minCure
-	if (orig_tier < minTier) then return nil end			--Return nil if not enough HP is missing
-	
-	local ctable = waltz and cu.waltz or cu.cure
-	local player = windower.ffxi.get_player()
-	local player_p = waltz and player.vitals.tp or player.vitals.mp	--Player's amount of mp/tp
-	local recasts = get_recast_timers(waltz)			--Cooldown timers for spells/abilities
-	local mult = cu.get_multiplier(waltz)				--Multiplier for MP/TP based on active buffs
-	
-	local tier = orig_tier
-	while (tier > 1) do
-		local spell = ctable[tier].res
-		local rctime = recasts[spell.recast_id] or 0		--Cooldown remaining for current tier
-		local cost = waltz and spell.tp_cost or spell.mp_cost	--Cost of current tier in MP/TP
-		
-		if ((cost * mult) > player_p) or (rctime > 0) then	--If not enough MP/TP or waiting on cooldown
-			tier = tier - 1					--Then decrement the tier
-		else							--Otherwise
-			break						--Use the current tier
-		end
-	end
-	return ctable[tier].res						--Return the resource info for the cure
+function cu.get_cure_tier_for_hp(hp_missing, cure_type)
+    local tier = settings.healing.max[cure_type]
+    while tier > 1 do
+        local potency = cu[cure_type][tier].hp
+        local pdelta = potency - cu[cure_type][tier-1].hp
+        local threshold = potency - (pdelta * 0.5)
+        if hp_missing >= threshold then
+            break
+        end
+        tier = tier - 1
+    end
+    return tier
 end
+
 
 --[[
-	Determines the tier of multi target cure that should be used for the given amounts of missing HP.
-	Works for both Curaga spells and Divine Waltzes.
+    Returns resource info for the chosen cure/waltz tier
 --]]
+function cu.get_usable_cure(orig_tier, cure_type)
+    local minTier = settings.healing.min[cure_type]
+    if orig_tier < minTier then return nil end
+    
+    local ctable = cu[cure_type]
+    local player = windower.ffxi.get_player()
+    
+    local _p, recasts
+    if cure_type:startswith('waltz') then
+        _p = 'tp'
+        recasts = windower.ffxi.get_ability_recasts()
+    else --it starts with 'cur'
+        _p = 'mp'
+        recasts = windower.ffxi.get_spell_recasts()
+    end
+    local player_p = player.vitals[_p]
+    local mult = cu.get_multiplier(cure_type)
+
+    local tier = orig_tier
+    while (tier > 1) do
+        local action = ctable[tier].res
+        local rctime = recasts[action.recast_id] or 0               --Cooldown remaining for current tier
+        local cost = action[_p..'_cost']                            --Cost of current tier in MP/TP
+        
+        if ((cost * mult) <= player_p) and (rctime == 0) then       --Sufficient MP/TP and cooldown is ready
+            break
+        end
+        tier = tier - 1
+    end
+    return ctable[tier].res
+end
+
+
 --[[
-function cu.get_curaga_tier_for_hp(hps_missing, waltz)
-	local ctable = waltz and cu.waltzga or cu.curaga
-	local tier = waltz and settings.healing.maxWaltzga or settings.healing.maxCuraga
-end
+    Returns the tier of the highest usable spell of type cure_type
 --]]
-
---[[
-	Determines the tier of multi target cure that should be used given the player's current state.
-	Works for both Cure spells and Curing Waltzes.
---]]
---[[
-function cu.get_usable_curaga(orig_tier, waltz)
-	local minTier = waltz and settings.healing.minWaltzga or settings.healing.minCuraga
-	if (orig_tier < minTier) then return nil end			--Return nil if not enough HP is missing
-	
-	local ctable = waltz and cu.waltzga or cu.curaga
-	local player = windower.ffxi.get_player()
-	local player_p = waltz and player.vitals.tp or player.vitals.mp	--Player's amount of mp/tp
-	local recasts = get_recast_timers(waltz)			--Cooldown timers for spells/abilities
-	local mult = cu.get_multiplier(waltz)				--Multiplier for MP/TP based on active buffs
-	
-	local tier = orig_tier
-	while (tier > 1) do
-		local spell = ctable[tier].res
-		local rctime = recasts[spell.recast_id] or 0		--Cooldown remaining for current tier
-		local cost = waltz and spell.tp_cost or spell.mp_cost	--Cost of current tier in MP/TP
-		
-		if ((cost * mult) > player_p) or (rctime > 0) then	--If not enough MP/TP or waiting on cooldown
-			tier = tier - 1					--Then decrement the tier
-		else							--Otherwise
-			break						--Use the current tier
-		end
-	end
-	return ctable[tier].res						--Return the resource info for the cure
-end
---]]
-
---======================================================================================================================
---			Functions for determining which Cure spells & abilities are available
---======================================================================================================================
-
-local function get_highest(tbl)
-	local highest = 0
-	for tier,spell in pairs(tbl) do
-		if Assert.can_use(spell.res) then
-			highest = (tier > highest) and tier or highest
-		end
-	end
-	return highest
+function cu.highest_tier(cure_type)
+    local highest = 0
+    for tier,spell in pairs(cu[cure_type]) do
+        if Assert.can_use(spell.res) then
+            highest = (tier > highest) and tier or highest
+        end
+    end
+    return highest
 end
 
-function cu.highest_cure_tier()
-	return get_highest(cu.cure)
-end
-function cu.highest_curaga_tier()
-	return get_highest(cu.curaga)
-end
-function cu.highest_waltz_tier()
-	return get_highest(cu.waltz)
-end
-function cu.highest_waltzga_tier()
-	return get_highest(cu.waltzga)
-end
-
---======================================================================================================================
 
 return cu
 
---======================================================================================================================
+--==============================================================================
 --[[
 Copyright © 2015, Lorand
 All rights reserved.
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
-following conditions are met:
-	* Redistributions of source code must retain the above copyright notice, this list of conditions and the
-	  following disclaimer.
-	* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the
-	  following disclaimer in the documentation and/or other materials provided with the distribution.
-	* Neither the name of ffxiHealer nor the names of its contributors may be used to endorse or promote products
-	  derived from this software without specific prior written permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL Lorand BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+    * Neither the name of ffxiHealer nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL Lorand BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]]
---======================================================================================================================
+--==============================================================================

@@ -12,7 +12,7 @@
 --]]
 function handle_incoming_chunk(id, data)
 	if S{0x28,0x29}:contains(id) then	--Action / Action Message
-		local monitoring = getMonitoredPlayers()
+		local monitoring = hb.getMonitoredPlayers()
 		local ai = get_action_info(id, data)
 		local actor = windower.ffxi.get_mob_by_id(ai.actor_id)
 		
@@ -107,9 +107,9 @@ function processMessage(ai, actor, monitoring)
 			if messages_wearOff:contains(ai.message_id) then
 				local buff = res.buffs[ai.param_1]
 				if enfeebling:contains(ai.param_1) then
-					registerDebuff(tname, buff.en, false)
+					buffs.registerDebuff(tname, buff.en, false)
 				else
-					registerBuff(tname, buff.en, false)
+					buffs.registerBuff(tname, buff.en, false)
 				end
 			end--/message ID checks
 		end--/message ID not on blacklist
@@ -128,25 +128,25 @@ function registerEffect(ai, tact, aname, tname, monitoring)
 		if messages_magicDamage:contains(tact.message_id) then		--ai.param: spell; tact.param: damage
 			local spell = res.spells[ai.param]
 			if S{230,231,232,233,234}:contains(ai.param) then
-				registerDebuff(tname, 'Bio', true)
+				buffs.registerDebuff(tname, 'Bio', true)
 			elseif S{23,24,25,26,27,33,34,35,36,37}:contains(ai.param) then
-				registerDebuff(tname, 'Dia', true)
+				buffs.registerDebuff(tname, 'Dia', true)
 			end
 		elseif messages_gainEffect:contains(tact.message_id) then	--ai.param: spell; tact.param: buff/debuff
 			--{tname} gains the effect of {buff} / {tname} is {debuff}ed
 			local buff = res.buffs[tact.param]
 			if enfeebling:contains(tact.param) then
-				registerDebuff(tname, buff.en, true)
+				buffs.registerDebuff(tname, buff.en, true)
 			else
-				registerBuff(tname, buff.en, true)
+				buffs.registerBuff(tname, buff.en, true)
 			end
 		elseif messages_loseEffect:contains(tact.message_id) then	--ai.param: spell; tact.param: buff/debuff
 			--{tname}'s {buff} wore off
 			local buff = res.buffs[tact.param]
 			if enfeebling:contains(tact.param) then
-				registerDebuff(tname, buff.en, false)
+				buffs.registerDebuff(tname, buff.en, false)
 			else
-				registerBuff(tname, buff.en, false)
+				buffs.registerBuff(tname, buff.en, false)
 			end
 		elseif messages_noEffect:contains(tact.message_id) then		--ai.param: spell; tact.param: buff/debuff
 			--Spell had no effect on {tname}
@@ -157,66 +157,66 @@ function registerEffect(ai, tact, aname, tname, monitoring)
 					local debuffs = removal_map[spell.en]
 					if (debuffs ~= nil) then
 						for _,debuff in pairs(debuffs) do
-							registerDebuff(tname, debuff, false)
+							buffs.registerDebuff(tname, debuff, false)
 						end
 					end
 				elseif spells_buffs:contains(spell.id) then
 					--The buff must already be active, or there must be some debuff preventing the buff from landing
-					local bname = getBuffNameForAction(spell.en)
+					local bname = buffs.getBuffNameForAction(spell.en)
 					if (bname == nil) then
 						atc(123, 'ERROR: No buff found for spell: '..spell.en)
 					else
-						registerBuff(tname, bname, false)
+						buffs.registerBuff(tname, bname, false)
 						if S{'Haste','Flurry'}:contains(bname) then
-							registerDebuff(tname, 'slow', true)
+							buffs.registerDebuff(tname, 'slow', true)
 						end
 					end
 				end
 			end
 		elseif messages_nonGeneric:contains(tact.message_id) then
 			if S{142,144,145}:contains(tact.message_id) then--${target} receives the effect of Accuracy Down and Evasion Down.
-				registerDebuff(tname, 'Accuracy Down', true)
-				registerDebuff(tname, 'Evasion Down', true)
+				buffs.registerDebuff(tname, 'Accuracy Down', true)
+				buffs.registerDebuff(tname, 'Evasion Down', true)
 			elseif S{329}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s STR is drained
-				registerDebuff(tname, 'STR Down', true)
+				buffs.registerDebuff(tname, 'STR Down', true)
 			elseif S{330}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s DEX is drained
-				registerDebuff(tname, 'DEX Down', true)
+				buffs.registerDebuff(tname, 'DEX Down', true)
 			elseif S{331}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s VIT is drained
-				registerDebuff(tname, 'VIT Down', true)
+				buffs.registerDebuff(tname, 'VIT Down', true)
 			elseif S{332}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s AGI is drained
-				registerDebuff(tname, 'AGI Down', true)
+				buffs.registerDebuff(tname, 'AGI Down', true)
 			elseif S{333}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s INT is drained
-				registerDebuff(tname, 'INT Down', true)
+				buffs.registerDebuff(tname, 'INT Down', true)
 			elseif S{334}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s MND is drained
-				registerDebuff(tname, 'MND Down', true)
+				buffs.registerDebuff(tname, 'MND Down', true)
 			elseif S{335}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s CHR is drained
-				registerDebuff(tname, 'CHR Down', true)
+				buffs.registerDebuff(tname, 'CHR Down', true)
 			elseif S{351}:contains(tact.message_id) then	--The remedy removes ${target}'s status ailments.
-				registerDebuff(tname, 'blindness', false)
-				registerDebuff(tname, 'paralysis', false)
-				registerDebuff(tname, 'poison', false)
-				registerDebuff(tname, 'silence', false)
+				buffs.registerDebuff(tname, 'blindness', false)
+				buffs.registerDebuff(tname, 'paralysis', false)
+				buffs.registerDebuff(tname, 'poison', false)
+				buffs.registerDebuff(tname, 'silence', false)
 			elseif S{359}:contains(tact.message_id) then	--${target} narrowly escapes impending doom.
-				registerDebuff(tname, 'doom', false)
+				buffs.registerDebuff(tname, 'doom', false)
 			elseif S{519}:contains(tact.message_id) then	--${actor} uses ${ability}.${lb}${target} is afflicted with Lethargic Daze (lv.${number}).
-				--registerDebuff(tname, 'Lethargic Daze', true)
+				--buffs.registerDebuff(tname, 'Lethargic Daze', true)
 			elseif S{520}:contains(tact.message_id) then	--${actor} uses ${ability}.${lb}${target} is afflicted with Sluggish Daze (lv.${number}).
-				--registerDebuff(tname, 'Sluggish Daze', true)
+				--buffs.registerDebuff(tname, 'Sluggish Daze', true)
 			elseif S{521}:contains(tact.message_id) then	--${actor} uses ${ability}.${lb}${target} is afflicted with Weakened Daze (lv.${number}).
-				--registerDebuff(tname, 'Weakened Daze', true)
+				--buffs.registerDebuff(tname, 'Weakened Daze', true)
 			elseif S{533}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s Accuracy is drained.
-				registerDebuff(tname, 'Accuracy Down', true)
+				buffs.registerDebuff(tname, 'Accuracy Down', true)
 			elseif S{534}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s Attack is drained.
-				registerDebuff(tname, 'Attack Down', true)
+				buffs.registerDebuff(tname, 'Attack Down', true)
 			elseif S{591}:contains(tact.message_id) then	--${actor} uses ${ability}.${lb}${target} is afflicted with Bewildered Daze (lv.${number}).
-				--registerDebuff(tname, 'Bewildered Daze', true)
+				--buffs.registerDebuff(tname, 'Bewildered Daze', true)
 			end
 		elseif S{185}:contains(tact.message_id) then	--${actor} uses ${weapon_skill}.${lb}${target} takes ${number} points of damage.
 			local mabil = res.monster_abilities[ai.param]
 			if (mabil ~= nil) then
-				if (mobAbils[mabil.en] ~= nil) then
-					for dbf,_ in pairs(mobAbils[mabil.en]) do
-						registerDebuff(tname, dbf, true)
+				if (hb_config.mobAbils[mabil.en] ~= nil) then
+					for dbf,_ in pairs(hb_config.mobAbils[mabil.en]) do
+						buffs.registerDebuff(tname, dbf, true)
 					end
 				end
 			end
@@ -225,7 +225,7 @@ function registerEffect(ai, tact, aname, tname, monitoring)
 	
 	if monitoring[aname] then
 		if messages_paralyzed:contains(tact.message_id) then
-			registerDebuff(aname, 'paralysis', true)
+			buffs.registerDebuff(aname, 'paralysis', true)
 		end
 	end--/monitoring actor
 end
