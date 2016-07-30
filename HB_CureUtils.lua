@@ -2,9 +2,6 @@
 --[[
     Author: Ragnarok.Lorand
     HealBot cure handling functions
-    
-    Currently transitioning between HealBot_cureHandling.lua and this file.
-    This one will fully replace it soon.
 --]]
 --==============================================================================
 
@@ -292,7 +289,7 @@ return cu
 
 --==============================================================================
 --[[
-Copyright © 2015, Lorand
+Copyright © 2016, Lorand
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.

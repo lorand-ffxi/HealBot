@@ -22,17 +22,17 @@ function buffs.checkOwnBuffs()
 		for _,bid in pairs(player.buffs) do
 			local buff = res.buffs[bid]
 			if (enfeebling:contains(bid)) then
-				buffs.registerDebuff(player.name, buff.en, true)
+				buffs.register_debuff(player, buff, true)
 			else
-				buffs.registerBuff(player.name, buff.en, true)
+				buffs.register_buff(player, buff, true)
 			end
 		end
 		--Double check the list of what should be active
 		local checklist = buffs.buffList[player.name] or {}
 		local active = S(player.buffs)
 		for bname,binfo in pairs(checklist) do
-			if not (active:contains(binfo.buff.id)) then
-				buffs.registerBuff(player.name, bname, false)
+			if not active:contains(binfo.buff.id) then
+				buffs.register_buff(player, bname, false)
 			end
 		end
 	end
@@ -43,7 +43,7 @@ function buffs.checkOwnBuff(buffName)
     local activeBuffIds = S(player.buffs)
     local buff = res.buffs:with('en', buffName) or {}
     if (activeBuffIds:contains(buff.id)) then
-        buffs.registerBuff(player.name, buffName, true)
+        buffs.register_buff(player, buff, true)
     end
 end
 
@@ -56,7 +56,7 @@ function buffs.getBuffQueue()
     local now = os.clock()
     for targ, buffset in pairs(buffs.buffList) do
         for buff, info in pairs(buffset) do
-            if (targ == myName) then
+            if (targ == healer.name) then
                 buffs.checkOwnBuff(buffs.getBuffNameForAction(info.action.en))
             end
             local action = info.action
@@ -74,20 +74,21 @@ function buffs.getDebuffQueue()
     local dbq = ActionQueue.new()
     local now = os.clock()
     for targ, debuffs in pairs(buffs.debuffList) do
-        for debuff, info in pairs(debuffs) do
-            local removalSpellName = debuff_map[debuff]
+        for id, info in pairs(debuffs) do
+            local debuff = res.buffs[id]
+            local removalSpellName = debuff_map[debuff.en]
             if (removalSpellName ~= nil) then
                 if (info.attempted == nil) or ((now - info.attempted) >= 3) then
                     local spell = res.spells:with('en', removalSpellName)
                     if Assert.can_use(spell) and Assert.target_is_valid(spell, targ) then
-                        local ign = buffs.ignored_debuffs[debuff]
+                        local ign = buffs.ignored_debuffs[debuff.en]
                         if not ((ign ~= nil) and ((ign.all == true) or ((ign[targ] ~= nil) and (ign[targ] == true)))) then
-                            dbq:enqueue('buff', spell, targ, debuff, ' ('..debuff..')')
+                            dbq:enqueue('debuff', spell, targ, debuff, ' ('..debuff.en..')')
                         end
                     end
                 end
             else
-                buffs.debuffList[targ][debuff] = nil
+                buffs.debuffList[targ][id] = nil
             end
         end
     end
@@ -118,7 +119,7 @@ function buffs.registerNewBuffName(targetName, bname, use)
     end
     
     local me = windower.ffxi.get_player()
-    local target = getTarget(targetName)
+    local target = utils.getTarget(targetName)
     if (target == nil) then
         atc('Unable to find buff target: '..targetName)
         return
@@ -168,7 +169,7 @@ function buffs.registerIgnoreDebuff(args, ignore)
             buffs.ignored_debuffs[dbname] = {['all']=ignore}
             atc('Will now '..msg..' '..dbname..' on everyone.')
         else
-            local trgname = getPlayerName(targetName)
+            local trgname = utils.getPlayerName(targetName)
             if (trgname ~= nil) then
                 buffs.ignored_debuffs[dbname] = buffs.ignored_debuffs[dbname] or {['all']=false}
                 if (buffs.ignored_debuffs[dbname].all == ignore) then
@@ -231,43 +232,92 @@ end
 --          Buff Tracking Functions
 --==============================================================================
 
-function buffs.registerDebuff(targetName, debuffName, gain)
-    buffs.debuffList[targetName] = buffs.debuffList[targetName] or {}
-    if (debuffName == 'slow') then
-        buffs.registerBuff(targetName, 'Haste', false)
-        buffs.registerBuff(targetName, 'Flurry', false)
+
+--[[
+    Register a debuff gain/loss on the given target, optionally with the action
+    that caused the debuff
+--]]
+function buffs.register_debuff(target, debuff, gain, action)
+    debuff = utils.normalize_action(debuff, 'buffs')
+    if debuff.enn == 'slow' then
+        buffs.register_buff(target, 'Haste', false)
+        buffs.register_buff(target, 'Flurry', false)
     end
+    local tid, tname = target.id, target.name
+    local is_enemy = (target.spawn_type == 16)
+    if is_enemy then
+        offense.mobs[tid] = offense.mobs[tid] or {}
+    else
+        buffs.debuffList[tname] = buffs.debuffList[tname] or {}
+    end
+    local debuff_tbl = is_enemy and offense.mobs[tid] or buffs.debuffList[tname]
+    local msg = is_enemy and 'mob 'or ''
     
     if gain then
-        local ignoreList = ignoreDebuffs[debuffName]
-        local pmInfo = partyMemberInfo[targetName]
-        if (ignoreList ~= nil) and (pmInfo ~= nil) then
-            if ignoreList:contains(pmInfo.job) and ignoreList:contains(pmInfo.subjob) then
-                --atc('Ignoring '..debuffName..' on '..targetName..' because of their job')
-                return
+        if is_enemy then
+            if offense.ignored[debuff.enn] ~= nil then return end
+        else
+            local ignoreList = ignoreDebuffs[debuff.en]
+            local pmInfo = partyMemberInfo[tname]
+            if (ignoreList ~= nil) and (pmInfo ~= nil) then
+                if ignoreList:contains(pmInfo.job) and ignoreList:contains(pmInfo.subjob) then
+                    atcd('Ignoring %s on %s because of their job':format(debuff.en, tname))
+                    return
+                end
             end
         end
-        
-        buffs.debuffList[targetName][debuffName] = {['landed']=os.clock()}
-        atcd('Detected debuff: '..debuffName..' '..rarr..' '..targetName)   
+        debuff_tbl[debuff.id] = {landed = os.clock()}
+        if is_enemy then
+            atc('Detected %sdebuff: %s %s %s [%s]':format(msg, debuff.en, rarr, tname, tid))
+        end
+        atcd('Detected %sdebuff: %s %s %s [%s]':format(msg, debuff.en, rarr, tname, tid))
     else
-        buffs.debuffList[targetName][debuffName] = nil
-        atcd('Detected debuff: '..debuffName..' wore off '..targetName)
+        debuff_tbl[debuff.id] = nil
+        if is_enemy then
+            atc('Detected %sdebuff: %s wore off %s [%s]':format(msg, debuff.en, tname, tid))
+        end
+        atcd('Detected %sdebuff: %s wore off %s [%s]':format(msg, debuff.en, tname, tid))
     end
 end
 
-function buffs.registerBuff(targetName, buffName, gain)
-    buffs.buffList[targetName] = buffs.buffList[targetName] or {}
-    if buffs.buffList[targetName][buffName] ~= nil then
-        if gain then
-            buffs.buffList[targetName][buffName]['landed'] = os.clock()
-            atcd("Detected buff: "..buffName.." "..rarr.." "..targetName)
-        else
-            buffs.buffList[targetName][buffName]['landed'] = nil
-            atcd("Detected buff: "..buffName.." wore off "..targetName)
-        end
+
+function buffs.register_buff(target, buff, gain, action)
+--local function _register_buff(target, buff, gain, action)
+    local nbuff = utils.normalize_action(buff, 'buffs')
+    
+    if nbuff == nil then
+        atcfs(123,'Error normalizing buff: %s', buff)
     end
+    
+    local tid, tname = target.id, target.name
+    local is_enemy = (target.spawn_type == 16)
+    if is_enemy then
+        offense.mobs[tid] = offense.mobs[tid] or {}
+    else
+        buffs.buffList[tname] = buffs.buffList[tname] or {}
+    end
+    local buff_tbl = is_enemy and offense.mobs[tid] or buffs.buffList[tname]
+    local msg = is_enemy and 'mob 'or ''
+    local bkey = is_enemy and nbuff.id or nbuff.en
+    if is_enemy and offense.dispel[bkey] or buff_tbl[bkey] then
+        buff_tbl[bkey] = buff_tbl[bkey] or {}
+        if gain then
+            buff_tbl[bkey].landed = os.clock()
+            if is_enemy then
+                atc('Detected %sbuff: %s %s %s [%s]':format(msg, nbuff.en, rarr, tname, tid))
+            end
+            atcd('Detected %sbuff: %s %s %s [%s]':format(msg, nbuff.en, rarr, tname, tid))
+        else
+            buff_tbl[bkey].landed = nil
+            if is_enemy then
+                atc('Detected %sbuff: %s wore off %s [%s]':format(msg, nbuff.en, tname, tid))
+            end
+            atcd('Detected %sbuff: %s wore off %s [%s]':format(msg, nbuff.en, tname, tid))
+        end
+    end 
 end
+--buffs.register_buff = traceable(_register_buff)
+
 
 function buffs.resetDebuffTimers(player)
     if (player == nil) then
@@ -305,7 +355,7 @@ return buffs
 
 --======================================================================================================================
 --[[
-Copyright © 2015-2016, Lorand
+Copyright © 2016, Lorand
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 following conditions are met:

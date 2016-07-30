@@ -19,6 +19,7 @@ end
 local compFunc = {}
 
 function ActionQueue:enqueue(actionType, action, name, secondary, msg)
+    --atcf('ActionQueue:enqueue(%s, %s, %s, %s, %s)', tostring(actionType), tostring(action), tostring(name), tostring(secondary), tostring(msg))
     local is_cure = actionType:startswith('cur')
     local secLabel = is_cure and 'hpp' or actionType
     local pprio = getPlayerPriority(name)
@@ -49,6 +50,8 @@ end
 
 
 function compFunc.default(index1, pa1, pb1, index2, pa2, pb2)
+--local function _default(index1, pa1, pb1, index2, pa2, pb2)
+    --atcf('compFunc.default(%s, %s, %s, %s, %s, %s)', tostring(index1), tostring(pa1), tostring(pb1), tostring(index2), tostring(pa2), tostring(pb2))
     if (pa1 < pa2) then         --p1 is higher priority
         if (pb2 < pb1) then     --action 2 is higher priority
             return index2
@@ -69,9 +72,11 @@ function compFunc.default(index1, pa1, pb1, index2, pa2, pb2)
         end
     end
 end
+--compFunc.default = traceable(_default)
 
 
 function compFunc.buff(index1, prio1, buff1, index2, prio2, buff2)
+    --atcf('compFunc.buff(%s, %s, %s, %s, %s, %s)', tostring(index1), tostring(prio1), tostring(buff1), tostring(index2), tostring(prio2), tostring(buff2))
     local bp1 = getBuffPriority(buff1)
     local bp2 = getBuffPriority(buff2)
     return compFunc.default(index1, prio1, bp1, index2, prio2, bp2)
@@ -79,9 +84,18 @@ end
 
 
 function compFunc.debuff(index1, prio1, debuff1, index2, prio2, debuff2)
+    --atcf('compFunc.debuff(%s, %s, %s, %s, %s, %s)', tostring(index1), tostring(prio1), tostring(debuff1), tostring(index2), tostring(prio2), tostring(debuff2))
     local rp1 = getRemovalPriority(debuff1)
     local rp2 = getRemovalPriority(debuff2)
     return compFunc.default(index1, prio1, rp1, index2, prio2, rp2)
+end
+
+
+function compFunc.debuff_mob(index1, prio1, debuff1, index2, prio2, debuff2)
+    --atcf('compFunc.debuff_mob(%s, %s, %s, %s, %s, %s)', tostring(index1), tostring(prio1), tostring(debuff1), tostring(index2), tostring(prio2), tostring(debuff2))
+    local dbp1 = getDebuffPriority(debuff1)
+    local dbp2 = getDebuffPriority(debuff2)
+    return compFunc.default(index1, prio1, dbp1, index2, prio2, dbp2)
 end
 
 
@@ -117,7 +131,7 @@ end
 
 
 function getPlayerPriority(tname)
-    if (tname == myName) then
+    if (tname == healer.name) then
         return 1
     elseif trusts:contains(tname) then
         return hb_config.priorities.default + 1
@@ -129,20 +143,30 @@ function getPlayerPriority(tname)
 end
 
 
-function getBuffPriority(buff_name)
-    local bnamef = buff_name:gsub(' ','_'):lower()
-    return hb_config.priorities.buffs[bnamef] or hb_config.priorities.default
+function getBuffPriority(buff)
+--local function _getBuffPriority(buff)
+    --atcf('getBuffPriority(%s)', tostring(buff))
+    local nbuff = utils.normalize_action(buff, 'buffs')
+    return hb_config.priorities.buffs[nbuff.enn] or hb_config.priorities.default
 end
+--getBuffPriority = traceable(_getBuffPriority)
 
 
 function getRemovalPriority(ailment)
-    local ailmentf = ailment:gsub(' ','_'):lower()
-    return hb_config.priorities.status_removal[ailmentf] or hb_config.priorities.default
+    local debuff = utils.normalize_action(ailment, 'buffs')
+    return hb_config.priorities.status_removal[debuff.enn] or hb_config.priorities.default
 end
+
+
+function getDebuffPriority(debuff)
+    local ndebuff = utils.normalize_action(debuff, 'buffs')
+    return hb_config.priorities.debuffs[ndebuff.enn] or hb_config.priorities.default
+end
+
 
 --======================================================================================================================
 --[[
-Copyright © 2015, Lorand
+Copyright © 2016, Lorand
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 following conditions are met:

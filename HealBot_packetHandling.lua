@@ -40,42 +40,6 @@ function handle_incoming_chunk(id, data)
 	end
 end
 
---[[
-	Process the information that was parsed from an action packet
-	@param ai action info
-	@param actor the PC/NPC initiating the action
-	@param monitoring the list of PCs that are being monitored
---]]
-function processAction(ai, actor, monitoring)
-	if (actor == nil) then return end
-	local aname = actor.name
-	for _,targ in pairs(ai.targets) do
-		local target = windower.ffxi.get_mob_by_id(targ.id)
-		if (target == nil) then return end
-		local tname = target.name
-		
-		if (monitoring[aname] or monitoring[tname]) then
-			for _,tact in pairs(targ.actions) do
-				if not (messages_blacklist:contains(tact.message_id)) then
-					if modes.showPacketInfo then
-						local msg = res.action_messages[tact.message_id] or {en='???'}
-						atc('[0x28]Action('..tact.message_id..'): '..aname..' { '..ai.param..' } '..rarr..' '..tname..' { '..tact.param..' } | '..msg.en)
-					end
-					
-					if windower.ffxi.get_player().name == aname then
-						if messages_initiating:contains(tact.message_id) then
-							actionStart = os.clock()
-						elseif messages_completing:contains(tact.message_id) then
-							actionEnd = os.clock()
-						end
-					end
-					
-					registerEffect(ai, tact, aname, tname, monitoring)
-				end--/message ID not on blacklist
-			end--/loop through targ's actions
-		end--/monitoring actor or target
-	end--/loop through action's targets
-end
 
 --[[
 	Process the information that was parsed from an action message packet
@@ -98,55 +62,99 @@ function processMessage(ai, actor, monitoring)
 			--Track whether or not the local player is performing an action
 			if windower.ffxi.get_player().name == aname then
 				if messages_initiating:contains(ai.message_id) then
-					actionStart = os.clock()
+					healer.actionStart = os.clock()
 				elseif messages_completing:contains(ai.message_id) then
-					actionEnd = os.clock()
+					healer.actionEnd = os.clock()
 				end
 			end
 			
 			if messages_wearOff:contains(ai.message_id) then
 				local buff = res.buffs[ai.param_1]
 				if enfeebling:contains(ai.param_1) then
-					buffs.registerDebuff(tname, buff.en, false)
+					buffs.register_debuff(target, buff, false)
 				else
-					buffs.registerBuff(tname, buff.en, false)
+					buffs.register_buff(target, buff, false)
 				end
 			end--/message ID checks
 		end--/message ID not on blacklist
 	end--/monitoring actor or target
 end
 
+
+--[[
+	Process the information that was parsed from an action packet
+	@param ai action info
+	@param actor the PC/NPC initiating the action
+	@param monitoring the list of PCs that are being monitored
+--]]
+function processAction(ai, actor, monitoring)
+	if (actor == nil) then return end
+	local aname = actor.name
+	for _,targ in pairs(ai.targets) do
+		local target = windower.ffxi.get_mob_by_id(targ.id)
+		if (target == nil) then return end
+		local tname = target.name
+		
+		if (monitoring[aname] or monitoring[tname]) then
+			for _,tact in pairs(targ.actions) do
+				if not (messages_blacklist:contains(tact.message_id)) then
+					if modes.showPacketInfo then
+						local msg = res.action_messages[tact.message_id] or {en='???'}
+						atc('[0x28]Action('..tact.message_id..'): '..aname..' { '..ai.param..' } '..rarr..' '..tname..' { '..tact.param..' } | '..msg.en)
+					end
+					
+					if healer.name == aname then
+						if messages_initiating:contains(tact.message_id) then
+							healer.actionStart = os.clock()
+						elseif messages_completing:contains(tact.message_id) then
+							healer.actionEnd = os.clock()
+						end
+					end
+					
+					registerEffect(ai, tact, actor, target, monitoring)
+				end--/message ID not on blacklist
+			end--/loop through targ's actions
+		end--/monitoring actor or target
+	end--/loop through action's targets
+end
+
+
 --[[
 	Register the effects that were discovered in an action packet
 	@param tact the subaction on a target
-	@param aname the name of the PC/NPC initiating the action
-	@param tname the name of the PC that is the target of the action
+	@param actor the PC/NPC initiating the action
+	@param target the PC/NPC that is the target of the action
 	@param monitoring the list of PCs that are being monitored
 --]]
-function registerEffect(ai, tact, aname, tname, monitoring)
-	if monitoring[tname] then
+function registerEffect(ai, tact, actor, target, monitoring)
+    local aname, tname = actor.name, target.name
+    local targ_is_enemy = (target.spawn_type == 16)
+    
+	--if monitoring[tname] then
+    if (monitoring[aname] or monitoring[tname]) then
 		if messages_magicDamage:contains(tact.message_id) then		--ai.param: spell; tact.param: damage
 			local spell = res.spells[ai.param]
 			if S{230,231,232,233,234}:contains(ai.param) then
-				buffs.registerDebuff(tname, 'Bio', true)
+				buffs.register_debuff(target, 'Bio', true, spell)
 			elseif S{23,24,25,26,27,33,34,35,36,37}:contains(ai.param) then
-				buffs.registerDebuff(tname, 'Dia', true)
+				buffs.register_debuff(target, 'Dia', true, spell)
 			end
 		elseif messages_gainEffect:contains(tact.message_id) then	--ai.param: spell; tact.param: buff/debuff
 			--{tname} gains the effect of {buff} / {tname} is {debuff}ed
+            local spell = res.spells[ai.param]
 			local buff = res.buffs[tact.param]
 			if enfeebling:contains(tact.param) then
-				buffs.registerDebuff(tname, buff.en, true)
+				buffs.register_debuff(target, buff, true, spell)
 			else
-				buffs.registerBuff(tname, buff.en, true)
+				buffs.register_buff(target, buff, true, spell)
 			end
 		elseif messages_loseEffect:contains(tact.message_id) then	--ai.param: spell; tact.param: buff/debuff
 			--{tname}'s {buff} wore off
 			local buff = res.buffs[tact.param]
 			if enfeebling:contains(tact.param) then
-				buffs.registerDebuff(tname, buff.en, false)
+				buffs.register_debuff(target, buff, false)
 			else
-				buffs.registerBuff(tname, buff.en, false)
+				buffs.register_buff(target, buff, false)
 			end
 		elseif messages_noEffect:contains(tact.message_id) then		--ai.param: spell; tact.param: buff/debuff
 			--Spell had no effect on {tname}
@@ -157,7 +165,7 @@ function registerEffect(ai, tact, aname, tname, monitoring)
 					local debuffs = removal_map[spell.en]
 					if (debuffs ~= nil) then
 						for _,debuff in pairs(debuffs) do
-							buffs.registerDebuff(tname, debuff, false)
+							buffs.register_debuff(target, debuff, false)
 						end
 					end
 				elseif spells_buffs:contains(spell.id) then
@@ -166,68 +174,42 @@ function registerEffect(ai, tact, aname, tname, monitoring)
 					if (bname == nil) then
 						atc(123, 'ERROR: No buff found for spell: '..spell.en)
 					else
-						buffs.registerBuff(tname, bname, false)
+						buffs.register_buff(target, bname, false)
 						if S{'Haste','Flurry'}:contains(bname) then
-							buffs.registerDebuff(tname, 'slow', true)
+							buffs.register_debuff(target, 'slow', true)
 						end
 					end
+                elseif spell_debuff_idmap[spell.id] ~= nil and targ_is_enemy then
+                    --The debuff already landed from someone else
+                    local debuff_id = spell_debuff_idmap[spell.id]
+                    buffs.register_debuff(target, debuff_id, true)
 				end
 			end
-		elseif messages_nonGeneric:contains(tact.message_id) then
-			if S{142,144,145}:contains(tact.message_id) then--${target} receives the effect of Accuracy Down and Evasion Down.
-				buffs.registerDebuff(tname, 'Accuracy Down', true)
-				buffs.registerDebuff(tname, 'Evasion Down', true)
-			elseif S{329}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s STR is drained
-				buffs.registerDebuff(tname, 'STR Down', true)
-			elseif S{330}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s DEX is drained
-				buffs.registerDebuff(tname, 'DEX Down', true)
-			elseif S{331}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s VIT is drained
-				buffs.registerDebuff(tname, 'VIT Down', true)
-			elseif S{332}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s AGI is drained
-				buffs.registerDebuff(tname, 'AGI Down', true)
-			elseif S{333}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s INT is drained
-				buffs.registerDebuff(tname, 'INT Down', true)
-			elseif S{334}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s MND is drained
-				buffs.registerDebuff(tname, 'MND Down', true)
-			elseif S{335}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s CHR is drained
-				buffs.registerDebuff(tname, 'CHR Down', true)
-			elseif S{351}:contains(tact.message_id) then	--The remedy removes ${target}'s status ailments.
-				buffs.registerDebuff(tname, 'blindness', false)
-				buffs.registerDebuff(tname, 'paralysis', false)
-				buffs.registerDebuff(tname, 'poison', false)
-				buffs.registerDebuff(tname, 'silence', false)
-			elseif S{359}:contains(tact.message_id) then	--${target} narrowly escapes impending doom.
-				buffs.registerDebuff(tname, 'doom', false)
-			elseif S{519}:contains(tact.message_id) then	--${actor} uses ${ability}.${lb}${target} is afflicted with Lethargic Daze (lv.${number}).
-				--buffs.registerDebuff(tname, 'Lethargic Daze', true)
-			elseif S{520}:contains(tact.message_id) then	--${actor} uses ${ability}.${lb}${target} is afflicted with Sluggish Daze (lv.${number}).
-				--buffs.registerDebuff(tname, 'Sluggish Daze', true)
-			elseif S{521}:contains(tact.message_id) then	--${actor} uses ${ability}.${lb}${target} is afflicted with Weakened Daze (lv.${number}).
-				--buffs.registerDebuff(tname, 'Weakened Daze', true)
-			elseif S{533}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s Accuracy is drained.
-				buffs.registerDebuff(tname, 'Accuracy Down', true)
-			elseif S{534}:contains(tact.message_id) then	--${actor} casts ${spell}.${lb}${target}'s Attack is drained.
-				buffs.registerDebuff(tname, 'Attack Down', true)
-			elseif S{591}:contains(tact.message_id) then	--${actor} uses ${ability}.${lb}${target} is afflicted with Bewildered Daze (lv.${number}).
-				--buffs.registerDebuff(tname, 'Bewildered Daze', true)
-			end
+        elseif messages_specific_debuff_gain[tact.message_id] ~= nil then
+            local gained_debuffs = messages_specific_debuff_gain[tact.message_id]
+            for _,gained_debuff in pairs(gained_debuffs) do
+                buffs.register_debuff(target, gained_debuff, true)
+            end
+        elseif messages_specific_debuff_lose[tact.message_id] ~= nil then
+            local lost_debuffs = messages_specific_debuff_lose[tact.message_id]
+            for _,lost_debuff in pairs(lost_debuffs) do
+                buffs.register_debuff(target, lost_debuff, false)
+            end
 		elseif S{185}:contains(tact.message_id) then	--${actor} uses ${weapon_skill}.${lb}${target} takes ${number} points of damage.
 			local mabil = res.monster_abilities[ai.param]
 			if (mabil ~= nil) then
 				if (hb_config.mobAbils[mabil.en] ~= nil) then
 					for dbf,_ in pairs(hb_config.mobAbils[mabil.en]) do
-						buffs.registerDebuff(tname, dbf, true)
+						buffs.register_debuff(target, dbf, true)
 					end
 				end
 			end
+        elseif S{655}:contains(tact.message_id) and targ_is_enemy then    --${actor} casts ${spell}.${lb}${target} completely resists the spell.
+            offense.register_immunity(target, res.buffs[tact.param])
+        elseif messages_paralyzed:contains(tact.message_id) then
+			buffs.register_debuff(actor, 'paralysis', true)
 		end--/message ID checks
-	end--/monitoring target of action
-	
-	if monitoring[aname] then
-		if messages_paralyzed:contains(tact.message_id) then
-			buffs.registerDebuff(aname, 'paralysis', true)
-		end
-	end--/monitoring actor
+	end
 end
 
 --[[
@@ -337,7 +319,7 @@ end
 
 -----------------------------------------------------------------------------------------------------------
 --[[
-Copyright © 2015, Lorand
+Copyright © 2016, Lorand
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.

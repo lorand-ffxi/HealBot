@@ -59,7 +59,7 @@ end
 --]]
 function as.target_is_valid(action, target)
 	if (type(target) == 'string') then
-		target = getTarget(target)	--TODO: FIX!! (in HealBot_utils.lua)
+		target = utils.getTarget(target)	--TODO: FIX!! (in HealBot_utils.lua)
 	end
 	local me = windower.ffxi.get_player()
 	local targetType = 'None'
@@ -81,7 +81,7 @@ end
 	Returns true if player/mob with the given name is in casting range.
 --]]
 function as.in_casting_range(name)
-	local target = getTarget(name)
+	local target = utils.getTarget(name)
 	if (target ~= nil) then
 		return math.sqrt(target.distance) < 20.9
 	end
@@ -113,14 +113,14 @@ function as.follow_target_exists()
 		settings.follow.active = false
 	elseif settings.follow.pause and (ft ~= nil) then
 		settings.follow.pause = nil
-		settings.follow.active = true;	end
+		settings.follow.active = true	end
 end
 
 return as
 
 --======================================================================================================================
 --[[
-Copyright © 2015, Lorand
+Copyright Â© 2016, Lorand
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 following conditions are met:
