@@ -164,11 +164,15 @@ function processCommand(command,...)
         elseif S{'off','false'}:contains(cmd) then
             offense.debuffing_active = false
             atc('Debuffing is now off.')
+        elseif S{'rm','remove'}:contains(cmd) then
+            utils.register_offensive_debuff(table.slice(args, 2), true)
+        elseif S{'ls','list'}:contains(cmd) then
+            pprint_tiered(offense.debuffs)
         else
             if S{'use','set'}:contains(cmd) then
                 table.remove(args, 1)
             end
-            utils.register_offensive_debuff(args)
+            utils.register_offensive_debuff(args, false)
         end
     elseif command == 'mincure' then
         if not validate(args, 1, 'Error: No argument specified for minCure') then return end
@@ -303,7 +307,7 @@ function processCommand(command,...)
 end
 
 
-function utils.register_offensive_debuff(args)
+function utils.register_offensive_debuff(args, cancel)
     local argstr = table.concat(args,' ')
     local spell_name = formatSpellName(argstr)
     local spell = getActionFor(spell_name)

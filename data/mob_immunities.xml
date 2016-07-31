@@ -1,8 +1,8 @@
 <?xml version="1.1" ?>
 <settings>
     <global>
-        <Bedrock Crag>
+        <bedrock_crag>
             <4>true</4>
-        </Bedrock Crag>
+        </bedrock_crag>
     </global>
 </settings>

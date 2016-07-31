@@ -58,7 +58,7 @@ windower.register_event('load', function()
     local player = windower.ffxi.get_player()
     healer.name = player and player.name or 'Player'
     
-    modes = {['showPacketInfo']=false,['debug']=false}
+    modes = {['showPacketInfo']=false,['debug']=false,['mob_debug']=false}
     _libs.lor.debug = modes.debug
     active = false
     lastActingState = false

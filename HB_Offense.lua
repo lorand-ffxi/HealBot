@@ -63,9 +63,13 @@ function offense.maintain_debuff(spell, cancel)
         return
     end
     local debuff = res.buffs[debuff_id]
-    local prio = hb_config.priorities.debuffs[debuff.enn] or hb_config.priorities.default
-    offense.debuffs[debuff.id] = {spell = nspell, res = debuff, prio = prio}
-    atcf('Will maintain debuff on mobs: %s', nspell.en)
+    if cancel then
+        offense.debuffs[debuff.id] = nil
+    else
+        offense.debuffs[debuff.id] = {spell = nspell, res = debuff}
+    end
+    local msg = cancel and 'no longer ' or ''
+    atcf('Will %smaintain debuff on mobs: %s', msg, nspell.en)
 end
 
 
@@ -80,8 +84,9 @@ end
 
 
 function offense.register_immunity(mob, debuff)
-    offense.immunities[mob.name] = offense.immunities[mob.name] or {}
-    offense.immunities[mob.name][debuff.id] = true
+    local n_name = utils.normalize_str(mob.name)
+    offense.immunities[n_name] = offense.immunities[n_name] or {}
+    offense.immunities[n_name][tostring(debuff.id)] = true
     offense.immunities:save('all')
 end
 
@@ -110,7 +115,8 @@ function offense.getDebuffQueue(player, target)
         offense.mobs[target.id] = offense.mobs[target.id] or {}
         for id,debuff in pairs(offense.debuffs) do
             if offense.mobs[target.id][id] == nil then
-                if not (offense.immunities[target.name] and offense.immunities[target.name][id]) then
+                local n_name = utils.normalize_str(target.name)
+                if not (offense.immunities[n_name] and offense.immunities[n_name][tostring(id)]) then
                     dbq:enqueue('debuff_mob', debuff.spell, target.name, debuff.res, ' (%s)':format(debuff.spell.en))
                 end
             end
