@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.10.2'
-_addon.lastUpdate = '2016.08.02'
+_addon.version = '2.10.3'
+_addon.lastUpdate = '2016.08.02.1'
 
 require('luau')
 require('lor/lor_utils')
@@ -39,7 +39,11 @@ windower.register_event('load', function()
         windower.add_to_chat(39,'ERROR: .../Windower/addons/libs/lor/ not found! Please download: https://github.com/lorand-ffxi/lor_libs')
     end
     atcc(262,'Welcome to HealBot! To see a list of commands, type //hb help')
-    atcc(261,'Curaga use is in beta testing! If it causes issues, you can disable it via //hb disable curaga, or in your settings xml')
+    atcc(39,'=':rep(80))
+    atcc(261,'WARNING: I switched the config files from XMLs to lua files.')
+    atcc(261,'You will need to update the lua files with any custom settings you had in your XMLs!')
+    atcc(261,'I apologize for the inconvenience; this makes many things easier behind the scenes.')
+    atcc(39,'=':rep(80))
 
     healer.zone_enter = os.clock()-25
     healer.zone_wait = false
