@@ -1,14 +1,15 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.10.0'
-_addon.lastUpdate = '2016.07.30'
+_addon.version = '2.10.2'
+_addon.lastUpdate = '2016.08.02'
 
 require('luau')
 require('lor/lor_utils')
 _libs.lor.include_addon_name = true
 _libs.lor.req('all', {n='tables',v='2016.07.24.1'}, {n='chat',v='2016.07.30'})
 _libs.req('queues')
+lor_settings = _libs.lor.settings
 
 healer = {}
 
@@ -34,22 +35,14 @@ require('HealBot_queues')
 hb = {}
 
 windower.register_event('load', function()
+    if not _libs.lor then
+        windower.add_to_chat(39,'ERROR: .../Windower/addons/libs/lor/ not found! Please download: https://github.com/lorand-ffxi/lor_libs')
+    end
     atcc(262,'Welcome to HealBot! To see a list of commands, type //hb help')
     atcc(261,'Curaga use is in beta testing! If it causes issues, you can disable it via //hb disable curaga, or in your settings xml')
-    if not _libs.lor then
-        atcc(39,'ERROR: .../Windower/addons/libs/lor/ not found! Please download: https://github.com/lorand-ffxi/lor_libs')
-    end
-    configs_loaded = false
-    load_configs()
-    CureUtils.init_cure_potencies()
-    
+
     healer.zone_enter = os.clock()-25
     healer.zone_wait = false
-    
-    trusts = populateTrustList()
-    ignoreList = S{}
-    extraWatchList = S{}
-    
     healer.lastAction = os.clock()
     healer.lastMoveCheck = os.clock()
     healer.actionStart = os.clock()
@@ -63,6 +56,14 @@ windower.register_event('load', function()
     active = false
     lastActingState = false
     partyMemberInfo = {}
+    
+    trusts = populateTrustList()
+    ignoreList = S{}
+    extraWatchList = S{}
+    
+    configs_loaded = false
+    load_configs()
+    CureUtils.init_cure_potencies()
 end)
 
 windower.register_event('logout', function()

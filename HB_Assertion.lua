@@ -61,11 +61,11 @@ function as.target_is_valid(action, target)
 	if (type(target) == 'string') then
 		target = utils.getTarget(target)	--TODO: FIX!! (in HealBot_utils.lua)
 	end
-	local me = windower.ffxi.get_player()
+    if target == nil then return false end
 	local targetType = 'None'
 	if (target.in_alliance) then
 		if (target.in_party) then
-			if (me.name == target.name) then
+			if (healer.name == target.name) then
 				targetType = 'Self'
 			else
 				targetType = 'Party'
@@ -113,7 +113,8 @@ function as.follow_target_exists()
 		settings.follow.active = false
 	elseif settings.follow.pause and (ft ~= nil) then
 		settings.follow.pause = nil
-		settings.follow.active = true	end
+		settings.follow.active = true
+	end
 end
 
 return as

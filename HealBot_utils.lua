@@ -63,7 +63,7 @@ local txtbox_cmd_map = {
 
 function processCommand(command,...)
     command = command and command:lower() or 'help'
-    local args = {...}
+    local args = map(windower.convert_auto_trans, {...})
     
     if command == 'reload' then
         windower.send_command('lua reload healBot')
@@ -653,7 +653,7 @@ function load_configs()
         disable = {curaga=false},
         ignoreTrusts=true
     }
-    local loaded = config.load('data/settings.xml', defaults)
+    local loaded = lor_settings.load('data/settings.lua', defaults)
     update_settings(loaded)
     utils.refresh_textBoxes()
     
@@ -664,12 +664,13 @@ function load_configs()
     local buff_lists_defaults = {       self = {'Haste II','Refresh II'},
         whm = {self={'Haste','Refresh'}}, rdm = {self={'Haste II','Refresh II'}}
     }
+    
     hb_config = {
         aliases = config.load('../shortcuts/data/aliases.xml'),
-        mabil_debuffs = config.load('data/mabil_debuffs.xml'),
-        buff_lists = config.load('data/buffLists.xml', buff_lists_defaults),
-        priorities = config.load('data/priorities.xml'),
-        cure_potency = config.load('data/cure_potency.xml', cure_potency_defaults)
+        mabil_debuffs = lor_settings.load('data/mabil_debuffs.lua'),
+        buff_lists = lor_settings.load('data/buffLists.lua', buff_lists_defaults),
+        priorities = lor_settings.load('data/priorities.lua'),
+        cure_potency = lor_settings.load('data/cure_potency.lua', cure_potency_defaults)
     }
     hb_config.priorities.players =        hb_config.priorities.players or {}
     hb_config.priorities.jobs =           hb_config.priorities.jobs or {}
@@ -679,11 +680,27 @@ function load_configs()
     hb_config.priorities.dispel =         hb_config.priorities.dispel or {}     --not implemented yet
     hb_config.priorities.default =        hb_config.priorities.default or 5
     
-    hb_config.mobAbils = process_mabil_debuffs()
+    --process_mabil_debuffs()
     local msg = configs_loaded and 'Rel' or 'L'
     configs_loaded = true
     atcc(262, msg..'oaded config files.')
 end
+
+
+function process_mabil_debuffs()
+    local debuff_names = table.keys(hb_config.mabil_debuffs)
+    for _,abil_raw in pairs(debuff_names) do
+        local abil_fixed = abil_raw:gsub('_',' '):capitalize()
+        hb_config.mabil_debuffs[abil_fixed] = S{}
+        local debuffs = hb_config.mabil_debuffs[abil_raw]
+        for _,debuff in pairs(debuffs) do
+            hb_config.mabil_debuffs[abil_fixed]:add(debuff)
+        end
+        hb_config.mabil_debuffs[abil_raw] = nil
+    end
+    hb_config.mabil_debuffs:save()
+end
+
 
 function update_settings(loaded)
     settings = settings or {}
@@ -738,17 +755,7 @@ function populateTrustList()
     return trusts
 end
 
-function process_mabil_debuffs()
-    local mabils = S{}
-    for abil_raw,debuffs in pairs(hb_config.mabil_debuffs) do
-        local aname = abil_raw:gsub('_',' '):capitalize()
-        mabils[aname] = S{}
-        for _,debuff in pairs(debuffs) do
-            mabils[aname]:add(debuff)
-        end
-    end
-    return mabils
-end
+
 
 --==============================================================================
 --          Table Functions

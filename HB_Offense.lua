@@ -6,8 +6,9 @@
 --==============================================================================
 
 local offense = {
-    debuffs={}, ignored={}, mobs={}, dispel={}, immunities=config.load('data/mob_immunities.xml'),
+    immunities=lor_settings.load('data/mob_immunities.lua'),
     assist={active = false, engage = false},
+    debuffs={}, ignored={}, mobs={}, dispel={},
     debuffing_active = true
 }
 
@@ -84,10 +85,9 @@ end
 
 
 function offense.register_immunity(mob, debuff)
-    local n_name = utils.normalize_str(mob.name)
-    offense.immunities[n_name] = offense.immunities[n_name] or {}
-    offense.immunities[n_name][tostring(debuff.id)] = true
-    offense.immunities:save('all')
+    offense.immunities[mob.name] = offense.immunities[mob.name] or {}
+    offense.immunities[mob.name][debuff.id] = true
+    offense.immunities:save()
 end
 
 
@@ -115,8 +115,7 @@ function offense.getDebuffQueue(player, target)
         offense.mobs[target.id] = offense.mobs[target.id] or {}
         for id,debuff in pairs(offense.debuffs) do
             if offense.mobs[target.id][id] == nil then
-                local n_name = utils.normalize_str(target.name)
-                if not (offense.immunities[n_name] and offense.immunities[n_name][tostring(id)]) then
+                if not (offense.immunities[target.name] and offense.immunities[target.name][id]) then
                     dbq:enqueue('debuff_mob', debuff.spell, target.name, debuff.res, ' (%s)':format(debuff.spell.en))
                 end
             end
