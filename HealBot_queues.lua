@@ -131,14 +131,18 @@ end
 
 
 function getPlayerPriority(tname)
+    local prios = hb_config.priorities
     if (tname == healer.name) then
         return 1
     elseif trusts:contains(tname) then
-        return hb_config.priorities.default + 1
+        return prios.default + 1
     end
     local pmInfo = partyMemberInfo[tname]
-    local jobprio = (pmInfo ~= nil) and hb_config.priorities.jobs[pmInfo.job:lower()] or hb_config.priorities.default
-    local playerprio = hb_config.priorities.players[tname:lower()] or hb_config.priorities.default
+    local jobprio = prios.default
+    if pmInfo ~= nil then
+        jobprio = prios.jobs[pmInfo.job] or prios.jobs[pmInfo.job:lower()] or jobprio
+    end
+    local playerprio = prios.players[tname] or prios.players[tname:lower()] or prios.default
     return math.min(jobprio, playerprio)
 end
 
@@ -146,21 +150,24 @@ end
 function getBuffPriority(buff)
 --local function _getBuffPriority(buff)
     --atcf('getBuffPriority(%s)', tostring(buff))
-    local nbuff = utils.normalize_action(buff, 'buffs')
-    return hb_config.priorities.buffs[nbuff.enn] or hb_config.priorities.default
+    local nbuff = buffs.buff_for_action(buff)
+    local prios = hb_config.priorities
+    return prios.buffs[nbuff.en] or prios.buffs[nbuff.enn] or prios.default
 end
 --getBuffPriority = traceable(_getBuffPriority)
 
 
 function getRemovalPriority(ailment)
     local debuff = utils.normalize_action(ailment, 'buffs')
-    return hb_config.priorities.status_removal[debuff.enn] or hb_config.priorities.default
+    local prios = hb_config.priorities
+    return prios.status_removal[debuff.en] or prios.status_removal[debuff.enn] or prios.default
 end
 
 
 function getDebuffPriority(debuff)
     local ndebuff = utils.normalize_action(debuff, 'buffs')
-    return hb_config.priorities.debuffs[ndebuff.enn] or hb_config.priorities.default
+    local prios = hb_config.priorities
+    return prios.debuffs[ndebuff.en] or prios.debuffs[ndebuff.enn] or prios.default
 end
 
 

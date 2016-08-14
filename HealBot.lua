@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.10.6'
-_addon.lastUpdate = '2016.08.14.1'
+_addon.version = '2.10.7'
+_addon.lastUpdate = '2016.08.14.2'
 
 require('luau')
 require('lor/lor_utils')

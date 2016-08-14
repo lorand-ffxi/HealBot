@@ -1,11 +1,11 @@
 return {
     ['_comment'] = 'Lower number = higher priority',
     ['buffs'] = {
-        ['afflatus_solace'] = 0,
-        ['composure'] = 0,
-        ['haste'] = 1,
-        ['refresh'] = 1,
-        ['reraise'] = 2
+        ['Afflatus Solace'] = 0,
+        ['Composure'] = 0,
+        ['Haste'] = 1,
+        ['Refresh'] = 1,
+        ['Reraise'] = 2
     },
     ['debuffs'] = {
         ['addle'] = 5,
@@ -106,7 +106,7 @@ return {
         ['whm'] = 4
     },
     ['players'] = {
-        ['lorand'] = 1
+        ['Lorand'] = 1
     },
     ['status_removal'] = {
         ['addle'] = 2,

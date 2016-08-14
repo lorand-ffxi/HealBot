@@ -8,7 +8,8 @@
 local buffs = {
     debuffList = {},
     buffList = {},
-    ignored_debuffs = {}
+    ignored_debuffs = {},
+    action_buff_map = lor_settings.load('data/action_buff_map.lua')
 }
 
 --==============================================================================
@@ -32,37 +33,32 @@ function buffs.checkOwnBuffs()
 		local active = S(player.buffs)
 		for bname,binfo in pairs(checklist) do
 			if not active:contains(binfo.buff.id) then
-				buffs.register_buff(player, bname, false)
+				buffs.register_buff(player, res.buffs[binfo.buff.id], false)
 			end
 		end
 	end
 end
 
-function buffs.checkOwnBuff(buffName)
-    local player = windower.ffxi.get_player()
-    local activeBuffIds = S(player.buffs)
-    local buff = res.buffs:with('en', buffName) or {}
-    if (activeBuffIds:contains(buff.id)) then
-        buffs.register_buff(player, buff, true)
-    end
-end
 
 --==============================================================================
 --          Monitored Player Buff Checking
 --==============================================================================
 
 function buffs.getBuffQueue()
+    local player = windower.ffxi.get_player()
+    local activeBuffIds = S(player.buffs)
     local bq = ActionQueue.new()
     local now = os.clock()
     for targ, buffset in pairs(buffs.buffList) do
-        for buff, info in pairs(buffset) do
+        for spell_name, info in pairs(buffset) do
             if (targ == healer.name) then
-                buffs.checkOwnBuff(buffs.getBuffNameForAction(info.action.en))
+                if (activeBuffIds:contains(info.buff.id)) then
+                    buffs.register_buff(player, res.buffs[info.buff.id], true)
+                end
             end
-            local action = info.action
             if (info.landed == nil) then
                 if (info.attempted == nil) or ((now - info.attempted) >= 3) then
-                    bq:enqueue('buff', action, targ, buff, nil)
+                    bq:enqueue('buff', info.action, targ, spell_name, nil)
                 end
             end
         end
@@ -140,8 +136,7 @@ function buffs.registerNewBuffName(targetName, bname, use)
     end
     
     buffs.buffList[target.name] = buffs.buffList[target.name] or {}
-    local bname = buffs.getBuffNameForAction(action)
-    local buff = res.buffs:with('en',bname)
+    local buff = buffs.buff_for_action(action)
     if (buff == nil) then
         atc('Unable to match the buff name to an actual buff: '..bname)
         return
@@ -203,30 +198,46 @@ function buffs.getAction(actionName, target)
     return action
 end
 
-function buffs.getBuffNameForAction(action)
+
+function buffs.buff_for_action(action)
     local spellName = action
     if type(action) == 'table' then
+        if buffs.action_buff_map[action.type] ~= nil then
+            local mapped_id = buffs.action_buff_map[action.type][action.id]
+            if mapped_id ~= nil then
+                return res.buffs[mapped_id]
+            end
+        end
         if (action.type == 'JobAbility') then
-            return action.en
+            return res.buffs:with('en', action.en)
         end
         spellName = action.en
     end
     
     if (buff_map[spellName] ~= nil) then
-        return buff_map[spellName]
+        if isnum(buff_map[spellName]) then
+            return res.buffs[buff_map[spellName]]
+        else
+            return res.buffs:with('en', buff_map[spellName])
+        end
     elseif spellName:match('^Protectr?a?%s?I*V?$') then
-        return 'Protect'
+        return res.buffs[40]
     elseif spellName:match('^Shellr?a?%s?I*V?$') then
-        return 'Shell'
+        return res.buffs[41]
     else
+        local buff = res.buffs:with('en', spellName)
+        if buff ~= nil then
+            return buff
+        end
         local buffName = spellName
         local spLoc = spellName:find(' ')
         if (spLoc ~= nil) then
             buffName = spellName:sub(1, spLoc-1)
         end
-        return buffName
+        return res.buffs:with('en', buffName)
     end
 end
+
 
 --==============================================================================
 --          Buff Tracking Functions
@@ -283,22 +294,36 @@ end
 
 function buffs.register_buff(target, buff, gain, action)
 --local function _register_buff(target, buff, gain, action)
+    --atcfs("%s -> %s [gain: %s]", buff, target.name, gain)
     local nbuff = utils.normalize_action(buff, 'buffs')
-    
     if nbuff == nil then
         atcfs(123,'Error normalizing buff: %s', buff)
     end
     
+    if action ~= nil then
+        buffs.action_buff_map[action.type] = buffs.action_buff_map[action.type] or {}
+        if buffs.action_buff_map[action.type][action.id] == nil then
+            buffs.action_buff_map[action.type][action.id] = nbuff.id
+            buffs.action_buff_map:save(true)
+        end
+    end
+    
     local tid, tname = target.id, target.name
     local is_enemy = (target.spawn_type == 16)
+    local bkey, msg = nbuff.id, ''
     if is_enemy then
         offense.mobs[tid] = offense.mobs[tid] or {}
+        msg = 'mob '
     else
         buffs.buffList[tname] = buffs.buffList[tname] or {}
+        for spell_name, info in pairs(buffs.buffList[tname]) do
+            if info.buff.id == nbuff.id then
+                bkey = spell_name
+                break
+            end
+        end
     end
     local buff_tbl = is_enemy and offense.mobs[tid] or buffs.buffList[tname]
-    local msg = is_enemy and 'mob 'or ''
-    local bkey = is_enemy and nbuff.id or nbuff.en
     if is_enemy and offense.dispel[bkey] or buff_tbl[bkey] then
         buff_tbl[bkey] = buff_tbl[bkey] or {}
         if gain then

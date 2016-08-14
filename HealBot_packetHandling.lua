@@ -141,12 +141,20 @@ function registerEffect(ai, tact, actor, target, monitoring)
 			end
 		elseif messages_gainEffect:contains(tact.message_id) then	--ai.param: spell; tact.param: buff/debuff
 			--{tname} gains the effect of {buff} / {tname} is {debuff}ed
-            local spell = res.spells[ai.param]
+            local cause = nil
+            if msg_gain_abil:contains(tact.message_id) then
+                cause = res.job_abilities[ai.param]
+            elseif msg_gain_spell:contains(tact.message_id) then
+                cause = res.spells[ai.param]
+            elseif msg_gain_ws:contains(tact.message_id) then
+                cause = res.weapon_skills[ai.param]
+            end
+            
 			local buff = res.buffs[tact.param]
 			if enfeebling:contains(tact.param) then
-				buffs.register_debuff(target, buff, true, spell)
+				buffs.register_debuff(target, buff, true, cause)
 			else
-				buffs.register_buff(target, buff, true, spell)
+				buffs.register_buff(target, buff, true, cause)
 			end
 		elseif messages_loseEffect:contains(tact.message_id) then	--ai.param: spell; tact.param: buff/debuff
 			--{tname}'s {buff} wore off
@@ -170,12 +178,12 @@ function registerEffect(ai, tact, actor, target, monitoring)
 					end
 				elseif spells_buffs:contains(spell.id) then
 					--The buff must already be active, or there must be some debuff preventing the buff from landing
-					local bname = buffs.getBuffNameForAction(spell.en)
-					if (bname == nil) then
+                    local buff = buffs.buff_for_action(spell)
+					if (buff == nil) then
 						atc(123, 'ERROR: No buff found for spell: '..spell.en)
 					else
-						buffs.register_buff(target, bname, false)
-						if S{'Haste','Flurry'}:contains(bname) then
+						buffs.register_buff(target, buff, false)
+						if S{'Haste','Flurry'}:contains(buff.en) then
 							buffs.register_debuff(target, 'slow', true)
 						end
 					end

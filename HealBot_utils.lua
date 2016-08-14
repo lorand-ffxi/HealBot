@@ -21,6 +21,12 @@ function utils.normalize_action(action, action_type)
     if action_type == nil then return nil end
     if isstr(action) then
         if tonumber(action) == nil then
+            local naction = res[action_type]:with('en', action)
+            if naction ~= nil then
+                --atcf("res.%s[%s] found for %s", action_type, naction.id, action)
+                return naction
+            end
+            --atcf("Searching resources for normalized name for %s [%s]", action, action_type)
             return res[action_type]:with('enn', utils.normalize_str(action))
         end
         action = tonumber(action) 
@@ -28,6 +34,7 @@ function utils.normalize_action(action, action_type)
     if isnum(action) then
         return res[action_type][action]
     end
+    --atcf("Unable to normalize: '%s'[%s] (%s)", tostring(action), type(action), tostring(action_type))
     return nil
 end
 
