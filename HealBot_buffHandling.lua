@@ -112,7 +112,7 @@ function buffs.registerNewBuff(args, use)
 end
 
 function buffs.registerNewBuffName(targetName, bname, use)
-    local spellName = formatSpellName(bname)
+    local spellName = utils.formatSpellName(bname)
     if (spellName == nil) then
         atc('Error: Unable to parse spell name')
         return

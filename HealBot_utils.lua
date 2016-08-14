@@ -275,6 +275,8 @@ function processCommand(command,...)
         utils.toggleX(settings, 'ignoreTrusts', args[1], 'Ignoring of Trust NPCs', 'IgnoreTrusts')
     elseif command == 'packetinfo' then
         toggleMode('showPacketInfo', args[1], 'Packet info display', 'PacketInfo')
+    elseif command == 'debug' then
+        toggleMode('debug', args[1], 'Debug mode', 'debug mode')
     elseif txtbox_cmd_map[command] ~= nil then
         local boxName = txtbox_cmd_map[command]
         if utils.posCommand(boxName, args) then
@@ -309,7 +311,7 @@ end
 
 function utils.register_offensive_debuff(args, cancel)
     local argstr = table.concat(args,' ')
-    local spell_name = formatSpellName(argstr)
+    local spell_name = utils.formatSpellName(argstr)
     local spell = getActionFor(spell_name)
     if (spell ~= nil) then
         if Assert.can_use(spell) then
@@ -325,7 +327,7 @@ end
 
 function utils.register_spam_spell(args)
     local argstr = table.concat(args,' ')
-    local spell_name = formatSpellName(argstr)
+    local spell_name = utils.formatSpellName(argstr)
     local spell = getActionFor(spell_name)
     if (spell ~= nil) then
         if Assert.can_use(spell) then
@@ -342,7 +344,7 @@ end
 
 function utils.register_ws(args)
     local argstr = table.concat(args,' ')
-    local wsname = formatSpellName(argstr)
+    local wsname = utils.formatSpellName(argstr)
     local ws = getActionFor(wsname)
     if (ws ~= nil) then
         settings.ws.name = wsname
@@ -577,7 +579,7 @@ end
 --          String Formatting Functions
 --==============================================================================
 
-function formatSpellName(text)
+function utils.formatSpellName(text)
     if (type(text) ~= 'string') or (#text < 1) then return nil end
     
     local fromAlias = hb_config.aliases[text]
@@ -609,6 +611,7 @@ function formatSpellName(text)
         end
     end
 end
+
 
 function formatName(text)
     if (text ~= nil) and (type(text) == 'string') then
