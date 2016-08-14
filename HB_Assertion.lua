@@ -18,10 +18,15 @@ function as.can_use(spell)
         if learned then
             local mj_id, sj_id = player.main_job_id, player.sub_job_id
             local jp_spent = player.job_points[player.main_job:lower()].jp_spent
-            local mj_req, sj_req = spell.levels[mj_id], spell.levels[sj_id]
-            
-            local mainCanCast = (mj_req ~= nil) and (mj_req <= player.main_job_level) or (mj_req <= jp_spent)
-            local subCanCast = (sj_req ~= nil) and (sj_req <= player.sub_job_level)
+            local mj_req = spell.levels[mj_id]
+            local sj_req = spell.levels[sj_id]
+            local mainCanCast, subCanCast = false, false
+            if mj_req ~= nil then
+                mainCanCast = (mj_req <= player.main_job_level) or (mj_req <= jp_spent)
+            end
+            if sj_req ~= nil then
+                subCanCast = (sj_req <= player.sub_job_level)
+            end
             return mainCanCast or subCanCast
         else
             if modes.debug then
