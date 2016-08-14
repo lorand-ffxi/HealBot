@@ -142,11 +142,11 @@ function buffs.registerNewBuffName(targetName, bname, use)
         return
     end
     
-    if (use) then
-        buffs.buffList[target.name][bname] = {['action']=action, ['maintain']=true, ['buff']=buff}
+    if use then
+        buffs.buffList[target.name][action.en] = {['action']=action, ['maintain']=true, ['buff']=buff}
         atc('Will maintain buff: '..action.en..' '..rarr..' '..target.name)
     else
-        buffs.buffList[target.name][bname] = nil
+        buffs.buffList[target.name][action.en] = nil
         atc('Will no longer maintain buff: '..action.en..' '..rarr..' '..target.name)
     end
 end
@@ -200,7 +200,7 @@ end
 
 
 function buffs.buff_for_action(action)
-    local spellName = action
+    local action_str = action
     if type(action) == 'table' then
         if buffs.action_buff_map[action.type] ~= nil then
             local mapped_id = buffs.action_buff_map[action.type][action.id]
@@ -211,28 +211,32 @@ function buffs.buff_for_action(action)
         if (action.type == 'JobAbility') then
             return res.buffs:with('en', action.en)
         end
-        spellName = action.en
+        action_str = action.en
     end
     
-    if (buff_map[spellName] ~= nil) then
-        if isnum(buff_map[spellName]) then
-            return res.buffs[buff_map[spellName]]
+    if (buff_map[action_str] ~= nil) then
+        if isnum(buff_map[action_str]) then
+            return res.buffs[buff_map[action_str]]
         else
-            return res.buffs:with('en', buff_map[spellName])
+            return res.buffs:with('en', buff_map[action_str])
         end
-    elseif spellName:match('^Protectr?a?%s?I*V?$') then
+    elseif action_str:match('^Protectr?a?%s?I*V?$') then
         return res.buffs[40]
-    elseif spellName:match('^Shellr?a?%s?I*V?$') then
+    elseif action_str:match('^Shellr?a?%s?I*V?$') then
         return res.buffs[41]
     else
-        local buff = res.buffs:with('en', spellName)
+        local buff = res.buffs:with('en', action_str)
         if buff ~= nil then
             return buff
         end
-        local buffName = spellName
-        local spLoc = spellName:find(' ')
+        buff = utils.normalize_action(action_str, 'buffs')
+        if buff ~= nil then
+            return buff
+        end
+        local buffName = action_str
+        local spLoc = action_str:find(' ')
         if (spLoc ~= nil) then
-            buffName = spellName:sub(1, spLoc-1)
+            buffName = action_str:sub(1, spLoc-1)
         end
         return res.buffs:with('en', buffName)
     end

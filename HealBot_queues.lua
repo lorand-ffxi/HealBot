@@ -151,6 +151,11 @@ function getBuffPriority(buff)
 --local function _getBuffPriority(buff)
     --atcf('getBuffPriority(%s)', tostring(buff))
     local nbuff = buffs.buff_for_action(buff)
+    
+    if nbuff == nil then
+        atcfs('Was unable to retrieve buff for action for %s', buff)
+    end
+    
     local prios = hb_config.priorities
     return prios.buffs[nbuff.en] or prios.buffs[nbuff.enn] or prios.default
 end

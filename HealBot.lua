@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.10.7'
-_addon.lastUpdate = '2016.08.14.2'
+_addon.version = '2.10.8'
+_addon.lastUpdate = '2016.08.14.3'
 
 require('luau')
 require('lor/lor_utils')
@@ -76,6 +76,16 @@ end)
 
 windower.register_event('zone change', function(new_id, old_id)
     healer.zone_enter = os.clock()
+    local zone_info = windower.ffxi.get_info()
+    if zone_info ~= nil then
+        if zone_info.zone == 131 then
+            windower.send_command('lua unload healBot')
+        elseif zone_info.mog_house == true then
+            active = false
+        elseif indoor_zones:contains(zone_info.zone) then
+            active = false
+        end
+    end
 end)
 
 windower.register_event('job change', function()

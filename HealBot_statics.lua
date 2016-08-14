@@ -90,6 +90,8 @@ tier_of_curaga = {['Curaga']=1,['Curaga II']=2,['Curaga III']=3,['Curaga IV']=4,
 cure_of_tier = {'Cure','Cure II','Cure III','Cure IV','Cure V','Cure VI'}
 curaga_of_tier = {'Curaga','Curaga II','Curaga III','Curaga IV','Curaga V'}
 
+indoor_zones = S{0,26,53,223,224,225,226,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,252,256,257,280,284}
+
 -----------------------------------------------------------------------------------------------------------
 --[[
 Copyright © 2016, Lorand
