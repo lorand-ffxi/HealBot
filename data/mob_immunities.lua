@@ -1,21 +1,26 @@
 return {
-    ['Bedrock Crag'] = {
-        [4] = true,
-        [194] = true
+    ['_comment'] = 'This file is automatically updated with buff IDs as immunities are discovered',
+    ['Bedrock Crag'] = S{
+        4,
+        194
     },
-    ['Broadleaf Palm'] = {
-        [194] = true
+    ['Broadleaf Palm'] = S{
+        194
     },
-    ['Despot'] = {
-        [194] = true
+    ['Despot'] = S{
+        194
     },
-    ['Dimensional Tether'] = {
-        [194] = true
+    ['Dimensional Tether'] = S{
+        194
     },
-    ['Knotted Root'] = {
-        [194] = true
+    ['Knotted Root'] = S{
+        194
     },
-    ['Sere Stump'] = {
-        [194] = true
+    ['Sere Stump'] = S{
+        194
+    },
+    ['Wintry Cave'] = S{
+        5,
+        13
     }
 }

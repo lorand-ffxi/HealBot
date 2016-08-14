@@ -231,7 +231,7 @@ function processCommand(command,...)
         buffs.registerNewBuff(args, true)
     elseif command == 'cancelbuff' then
         buffs.registerNewBuff(args, false)
-    elseif command == 'bufflist' then
+    elseif S{'bufflist','bl'}:contains(command) then
         if not validate(args, 1, 'Error: No argument specified for BuffList') then return end
         utils.apply_bufflist(args)
     elseif command == 'bufflists' then
@@ -795,9 +795,10 @@ function help_text()
         {'fcmd','Sets a player to follow, the distance to maintain, or toggles being active with no argument'},
         {'buff <player> <spell>[, <spell>[, ...]]','Sets spell(s) to be maintained on the given player'},
         {'cancelbuff <player> <spell>[, <spell>[, ...]]','Un-sets spell(s) to be maintained on the given player'},
-        {'bufflist <list name> <player>','Sets the given list of spells to be maintained on the given player'},
+        {'blcmd','Sets the given list of spells to be maintained on the given player'},
         {'bufflists','Lists the currently configured spells/abilities in each bufflist'},
-        {'spam [use <spell> | <bool>]','Sets the spell to be spammed, or toggles being active (default: Stone, off) [Requires an assist target to activate]'},
+        {'spam [use <spell> | <bool>]','Sets the spell to be spammed on assist target\s enemy, or toggles being active (default: Stone, off)'},
+        {'dbcmd','Add/remove debuff spell to maintain on assist target\'s enemy, toggle on/off, or list current debuffs to maintain'},
         {'mincure <number>','Sets the minimum cure spell tier to cast (default: 3)'},
         {'disable <action type>','Disables actions of a given type (cure, buff, na)'},
         {'enable <action type>','Re-enables actions of a given type (cure, buff, na) if they were disabled'},
@@ -818,7 +819,6 @@ function help_text()
         {'actioninfo [pos <x> <y> | on | off]','Moves character status info, or toggles display with no argument (default: on)'},
         {'moveinfo [pos <x> <y> | on | off]','Moves movement status info, or toggles display with no argument (default: off)'},
         {'monitored [pos <x> <y> | on | off]','Moves monitored player list, or toggles display with no argument (default: on)'},
-        {'disable curaga','In addons/HealBot/data/settings.xml:\n<settings>\n  <global>\n    ...\n    <disable>\n      <curaga>true</curaga>\n    </disable>\n    ...\n  </global>\n</settings>'},
         {'help','Displays this help text'}
     }
     local acmds = {
@@ -828,6 +828,8 @@ function help_text()
         ['wscmd2']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill hp <sign> <mob hp%>',
         ['wscmd3']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill waitfor <player> <tp>',
         ['wscmd4']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill nopartner',
+        ['dbcmd']='d':colorize(ac,cc)..'e'..'b':colorize(ac,cc)..'uff [(use | rm) <spell> | on | off | ls]',
+        ['blcmd']='b':colorize(ac,cc)..'uff'..'l':colorize(ac,cc)..'ist <list name> (<player>)',
     }
     
     for _,tbl in pairs(cmds) do

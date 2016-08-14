@@ -1,4 +1,5 @@
 return {
+    ['_comment'] = 'Lower number = higher priority',
     ['buffs'] = {
         ['afflatus_solace'] = 0,
         ['composure'] = 0,
