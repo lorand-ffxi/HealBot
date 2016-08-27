@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.10.8'
-_addon.lastUpdate = '2016.08.14.3'
+_addon.version = '2.11.0'
+_addon.lastUpdate = '2016.08.27.0'
 
 require('luau')
 require('lor/lor_utils')
@@ -10,6 +10,7 @@ _libs.lor.include_addon_name = true
 _libs.lor.req('all', {n='tables',v='2016.07.24.1'}, {n='chat',v='2016.07.30'})
 _libs.req('queues')
 lor_settings = _libs.lor.settings
+serialua = _libs.lor.serialization
 
 healer = {}
 
@@ -34,7 +35,11 @@ require('HealBot_queues')
 
 hb = {}
 
-windower.register_event('load', function()
+local _events = {}
+local ipc_req = serialua.encode({method='GET', pk='buff_ids'})
+
+
+_events['load'] = windower.register_event('load', function()
     if not _libs.lor then
         windower.add_to_chat(39,'ERROR: .../Windower/addons/libs/lor/ not found! Please download: https://github.com/lorand-ffxi/lor_libs')
     end
@@ -51,6 +56,8 @@ windower.register_event('load', function()
     healer.lastMoveCheck = os.clock()
     healer.actionStart = os.clock()
     healer.actionEnd = healer.actionStart + 0.1
+    healer.last_ipc_sent = os.clock()
+    healer.ipc_delay = 2
     
     local player = windower.ffxi.get_player()
     healer.name = player and player.name or 'Player'
@@ -70,11 +77,20 @@ windower.register_event('load', function()
     CureUtils.init_cure_potencies()
 end)
 
-windower.register_event('logout', function()
+
+_events['unload'] = windower.register_event('unload', function()
+    for _,event in pairs(_events) do
+        windower.unregister_event(event)
+    end
+end)
+
+
+_events['logout'] = windower.register_event('logout', function()
     windower.send_command('lua unload healBot')
 end)
 
-windower.register_event('zone change', function(new_id, old_id)
+
+_events['zone'] = windower.register_event('zone change', function(new_id, old_id)
     healer.zone_enter = os.clock()
     local zone_info = windower.ffxi.get_info()
     if zone_info ~= nil then
@@ -88,20 +104,21 @@ windower.register_event('zone change', function(new_id, old_id)
     end
 end)
 
-windower.register_event('job change', function()
+
+_events['job'] = windower.register_event('job change', function()
     active = false
     printStatus()
 end)
 
-windower.register_event('incoming chunk', handle_incoming_chunk)
-windower.register_event('addon command', processCommand)
+_events['inc'] = windower.register_event('incoming chunk', handle_incoming_chunk)
+_events['cmd'] = windower.register_event('addon command', processCommand)
 
 
 --[[
     Executes before each frame is rendered for display.
     Acts as the run() method of a threaded application.
 --]]
-windower.register_event('prerender', function()
+_events['render'] = windower.register_event('prerender', function()
     local now = os.clock()
     local moving = hb.isMoving(now)
     local acting = hb.isPerformingAction(moving)
@@ -141,13 +158,20 @@ windower.register_event('prerender', function()
                 healer.lastAction = now     --Refresh stored action check time
             end
         end
+        
+        if active and ((now - healer.last_ipc_sent) > healer.ipc_delay) then
+            windower.send_ipc_message(ipc_req)
+            healer.last_ipc_sent = now
+        end
     end
 end)
+
 
 function wcmd(prefix, action, target)
     windower.send_command('input %s "%s" "%s"':format(prefix, action, target))
     settings.actionDelay = 0.6
 end
+
 
 function hb.activate()
     local player = windower.ffxi.get_player()
@@ -164,6 +188,7 @@ function hb.activate()
     printStatus()
 end
 
+
 function hb.addPlayer(list, player)
     if (player ~= nil) and (not (ignoreList:contains(player.name))) then
         local is_trust = player.mob and player.mob.spawn_type == 14 or false    --13 = players; 14 = Trust NPC
@@ -179,6 +204,7 @@ function hb.addPlayer(list, player)
         end
     end
 end
+
 
 function hb.getMonitoredPlayers()
     local pt = windower.ffxi.get_party()
@@ -210,6 +236,7 @@ function hb.getMonitoredPlayers()
     return targets
 end
 
+
 function hb.isMoving(now)
     if (getPosition() == nil) then
         txts.moveInfo:hide()
@@ -229,10 +256,12 @@ function hb.isMoving(now)
     if math.floor(timeAtPos) == timeAtPos then
         timeAtPos = timeAtPos..'.0'
     end
-    txts.moveInfo:text('Time @ '..currentPos:toString()..': '..timeAtPos..'s')
+    txts.moveInfo:text('Time @ %s: %ss':format(currentPos:toString(), timeAtPos))
+    --txts.moveInfo:text('Time @ '..currentPos:toString()..': '..timeAtPos..'s')
     txts.moveInfo:visible(settings.textBoxes.moveInfo.visible)
     return moving
 end
+
 
 function hb.isPerformingAction(moving)
     if (os.clock() - healer.actionStart) > 8 then
@@ -274,11 +303,58 @@ function hb.isPerformingAction(moving)
         end
     end
     
-    local hb = active and '\\cs(0,0,255)[ON]\\cr' or '\\cs(255,0,0)[OFF]\\cr'
-    txts.actionInfo:text(' %s %s %s':format(hb, healer.name, status))
+    local hb_status = active and '\\cs(0,0,255)[ON]\\cr' or '\\cs(255,0,0)[OFF]\\cr'
+    txts.actionInfo:text(' %s %s %s':format(hb_status, healer.name, status))
     txts.actionInfo:visible(settings.textBoxes.actionInfo.visible)
     return acting
 end
+
+
+function hb.process_ipc(msg)
+    local loaded = serialua.decode(msg)
+    if loaded == nil then
+        atc(53, 'Received nil IPC message')
+    elseif type(loaded) ~= 'table' then
+        atcfs(264, 'IPC message: %s', loaded)
+    elseif loaded.method == 'GET' then
+        if loaded.pk ~= nil then        
+            if loaded.pk == 'buff_ids' then
+                local player = windower.ffxi.get_player()
+                local response = {
+                    method='POST', pk='buff_ids', val=player.buffs,
+                    pid=player.id, name=player.name, stype=player.spawn_type
+                }
+                local encoded = serialua.encode(response)
+                windower.send_ipc_message(encoded)
+            else
+                atcfs(123, 'Invalid pk for GET request: %s', loaded.pk)
+            end
+        else
+            atcfs(123, 'Invalid GET request: %s', msg)
+        end
+    elseif loaded.method == 'POST' then
+        if loaded.pk ~= nil then        
+            if loaded.pk == 'buff_ids' then
+                if loaded.name ~= nil then                
+                    local player = windower.ffxi.get_mob_by_name(loaded.name)
+                    player = player or {id=loaded.pid,name=loaded.name,spawn_type=loaded.stype}
+                    buffs.review_active_buffs(player, loaded.val)
+                else
+                    atcfs(123, 'Missing name in POST message: %s', msg)
+                end
+            else
+                atcfs(123, 'Invalid pk for POST message: %s', loaded.pk)
+            end
+        else
+            atcfs(123, 'Invalid POST message: %s', msg)
+        end
+    else
+        atcfs(123, 'Invalid IPC message: %s', msg)
+    end
+end
+
+_events['ipc'] = windower.register_event('ipc message', hb.process_ipc)
+
 
 --======================================================================================================================
 --[[

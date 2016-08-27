@@ -1,4 +1,5 @@
 return {
+    ['Acid Mist'] = S{'Attack Down'},
     ['Bad Breath'] = S{
         'blindness',
         'paralysis',
@@ -47,6 +48,8 @@ return {
     ['Poison Breath'] = S{
         'poison'
     },
+    ['Sand Breath'] = S{'blindness'},
+    ['Sanguinary Slash'] = S{'Max HP Down'},
     ['Shearing Undulation'] = S{
         'Defense Down',
         'Magic Def. Down'

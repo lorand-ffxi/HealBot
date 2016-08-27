@@ -2,6 +2,10 @@
 
 ## Update: HealBot now depends on [libs/lor](https://github.com/lorand-ffxi/lor_libs)
 
+## NEW: IPC has been added! (see below)
+
+### Summary
+
 By default, HealBot will monitor the party that it is in.  Commands to monitor
 or ignore additional players can be found below.
 
@@ -25,6 +29,20 @@ Also coming soon is the ability to cast offensive spells on an assist target's
 target.  
 
 --------------------------------------------------------------------------------
+
+### IPC (Inter-Process Communication)
+
+HealBot now supports IPC between multiple instances of Windower running on the
+same computer when both characters have HealBot loaded!  This means that HealBot
+will now be even better at detecting the buffs/debuffs that are active for
+characters on the same computer!
+
+Only the healer's HealBot needs to be on - the non-healer just needs to have
+HealBot loaded to be able to tell the healer's instance about its active buffs
+and debuffs.
+
+
+### Settings
 
 If you have the shortcuts addon installed, your aliases.xml file from that addon
 will be loaded, and those aliases will be available for use when specifying
