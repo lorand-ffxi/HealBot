@@ -363,13 +363,16 @@ end
 
 
 function utils.apply_bufflist(args)
-    local job = windower.ffxi.get_player().main_job
+    local mj = windower.ffxi.get_player().main_job
+    local sj = windower.ffxi.get_player().sub_job
+    local job = '%s/%s':format(mj, sj) 
     local bl_name = args[1]
     local bl_target = args[2]
     if bl_target == nil and bl_name == 'self' then
         bl_target = 'me'
     end
-    local buff_list = table.get_nested_value(hb_config.buff_lists, {job, job:lower()}, bl_name)
+    local buff_list = table.get_nested_value(hb_config.buff_lists, {job, job:lower(), mj, mj:lower()}, bl_name)
+    
     buff_list = buff_list or hb_config.buff_lists[bl_name]
     if buff_list ~= nil then
         for _,buff in pairs(buff_list) do
@@ -579,7 +582,18 @@ function getActionFor(actionName)
     local abil = res.job_abilities:with('en', actionName)
     local ws = res.weapon_skills:with('en', actionName)
     
-    return spell or abil or ws or nil
+    local found = spell or abil or ws or nil
+    if found ~= nil then
+        return found
+    end
+    
+    local lower_name = actionName:lower()
+    for _,ws in pairs(res.weapon_skills) do
+        if ws.en:lower() == lower_name then
+            return ws
+        end
+    end
+    return nil
 end
 
 --==============================================================================

@@ -3,6 +3,7 @@ return {
     ['buffs'] = {
         ['Afflatus Solace'] = 0,
         ['Composure'] = 0,
+        ['Light Arts'] = 0,
         ['Haste'] = 1,
         ['Refresh'] = 1,
         ['Reraise'] = 2

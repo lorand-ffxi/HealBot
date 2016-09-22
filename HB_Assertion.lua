@@ -75,17 +75,20 @@ function as.target_is_valid(action, target)
         target = utils.getTarget(target)    --TODO: FIX!! (in HealBot_utils.lua)
     end
     if target == nil then return false end
+    local stype = target.spawn_type
+    
     local targetType = 'None'
-    if (target.in_alliance) then
-        if (target.in_party) then
-            if (healer.name == target.name) then
-                targetType = 'Self'
-            else
-                targetType = 'Party'
-            end
+    if target.is_npc and (stype ~= 14) then
+        targetType = 'Enemy'
+    elseif target.in_alliance then
+        if target.in_party then
+            targetType = (healer.name == target.name) and 'Self' or 'Party'
         else
             targetType = 'Ally'
         end
+    else
+        --targetType = 'Player'
+        targetType = 'Ally' --Workaround for incorrect entries in resources
     end
     return S(action.targets):contains(targetType)
 end

@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.11.0'
-_addon.lastUpdate = '2016.08.27.0'
+_addon.version = '2.11.3'
+_addon.lastUpdate = '2016.09.21.0'
 
 require('luau')
 require('lor/lor_utils')
@@ -124,7 +124,7 @@ _events['render'] = windower.register_event('prerender', function()
     local acting = hb.isPerformingAction(moving)
     local player = windower.ffxi.get_player()
     healer.name = player and player.name or 'Player'
-    if (player ~= nil) and S{0,1,5}:contains(player.status) then    --0/1/5 = idle/engaged/chocobo
+    if (player ~= nil) and S{0,1,5,85}:contains(player.status) then    --0/1/5/85 = idle/engaged/chocobo/other_mount
         local partner,targ = offense.assistee_and_target()
         Assert.follow_target_exists()   --Attempts to prevent autorun problems
         if (settings.follow.active or offense.assist.active) and ((now - healer.lastMoveCheck) > settings.follow.delay) then

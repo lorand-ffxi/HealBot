@@ -53,6 +53,19 @@ return {
         },
         ['self'] = {
             'Haste',
+            'Aquaveil',
+            'Protectra V',
+            'Shellra V',
+            'Reraise III',
+            'Afflatus Solace'
+        }
+    },
+    ['whm/rdm'] = {
+        ['melee'] = {
+            'Haste'
+        },
+        ['self'] = {
+            'Haste',
             'Refresh',
             'Aquaveil',
             'Protectra V',
@@ -60,6 +73,22 @@ return {
             'Phalanx',
             'Reraise III',
             'Afflatus Solace'
+        }
+    },
+    ['whm/sch'] = {
+        ['melee'] = {
+            'Haste'
+        },
+        ['self'] = {
+            'Haste',
+            'Light Arts',
+            'Aquaveil',
+            'Protectra V',
+            'Shellra V',
+            'Reraise III',
+            'Afflatus Solace',
+            'Aurorastorm',
+            'Auspice'
         }
     }
 }
