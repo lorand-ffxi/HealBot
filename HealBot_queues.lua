@@ -5,24 +5,26 @@
 --]]
 --==============================================================================
 
+local compFunc = {}
 ActionQueue = {}
+
 
 function ActionQueue.new()
     local self = {queue=Q({})}
     return setmetatable(self, {__index = ActionQueue})
 end
 
+
 function ActionQueue:getQueue()
     return self.queue
 end
 
-local compFunc = {}
 
 function ActionQueue:enqueue(actionType, action, name, secondary, msg)
     --atcf('ActionQueue:enqueue(%s, %s, %s, %s, %s)', tostring(actionType), tostring(action), tostring(name), tostring(secondary), tostring(msg))
     local is_cure = actionType:startswith('cur')
     local secLabel = is_cure and 'hpp' or actionType
-    local pprio = getPlayerPriority(name)
+    local pprio = getPlayerPriority[name]
     if is_cure and actionType == 'curaga' then
         pprio = pprio + 2
     end
@@ -33,7 +35,7 @@ function ActionQueue:enqueue(actionType, action, name, secondary, msg)
         local highestAbove = 999
         for index = 1, self.queue:length() do
             local qi = self.queue[index]
-            local qprio = getPlayerPriority(qi.name)
+            local qprio = getPlayerPriority[qi.name]
             local higher = compFunc[actionType](-1, pprio, secondary, index, qprio, qi[secLabel])
             if (higher == -1) and (index < highestAbove) then
                 highestAbove = index
@@ -130,11 +132,13 @@ function compFunc.cure(index1, prio1, hpp1, index2, prio2, hpp2)
 end
 
 
-function getPlayerPriority(tname)
-    local prios = hb_config.priorities
+local function _getPlayerPriority(tname)
     if (tname == healer.name) then
         return 1
-    elseif trusts:contains(tname) then
+    end
+    local prios = hb_config.priorities
+    local player_mob = windower.ffxi.get_mob_by_name(tname)
+    if player_mob.spawn_type == 14 then     --Trust
         return prios.default + 1
     end
     local pmInfo = partyMemberInfo[tname]
@@ -145,6 +149,7 @@ function getPlayerPriority(tname)
     local playerprio = prios.players[tname] or prios.players[tname:lower()] or prios.default
     return math.min(jobprio, playerprio)
 end
+getPlayerPriority = _libs.lor.advutils.scached(_getPlayerPriority)
 
 
 function getBuffPriority(buff)

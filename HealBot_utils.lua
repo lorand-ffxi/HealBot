@@ -316,6 +316,12 @@ function processCommand(command,...)
 end
 
 
+local function _get_player_id(player_name)
+    return windower.ffxi.get_mob_by_name(player_name).id
+end
+utils.get_player_id = _libs.lor.advutils.scached(_get_player_id)
+
+
 function utils.register_offensive_debuff(args, cancel)
     local argstr = table.concat(args,' ')
     local spell_name = utils.formatSpellName(argstr)
@@ -739,7 +745,6 @@ function update_settings(loaded)
         end
     end
     table.update_if_not_set(settings, {
-        actionDelay = 0.08,
         disable = {},
         follow = {delay = 0.08, distance = 3},
         healing = {minCure = 3, minCuraga = 1, minWaltz = 2, minWaltzga = 1},
@@ -768,17 +773,6 @@ function utils.refresh_textBoxes()
         txts[box] = texts.new(bst)
     end
 end
-
-function populateTrustList()
-    local trusts = S{}
-    for _,spell in pairs(res.spells) do
-        if (spell.type == 'Trust') then
-            trusts:add(spell.en)
-        end
-    end
-    return trusts
-end
-
 
 
 --==============================================================================

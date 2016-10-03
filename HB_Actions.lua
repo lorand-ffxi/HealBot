@@ -64,9 +64,9 @@ function actions.get_defensive_action()
 	if (action.cure ~= nil) then
 		if (action.debuff ~= nil) and (action.debuff.action.en == 'Paralyna') and (action.debuff.name == healer.name) then
 			return action.debuff
-		elseif (action.debuff ~= nil) and (action.debuff.prio < action.cure.prio) then
+		elseif (action.debuff ~= nil) and ((action.debuff.prio + 2) < action.cure.prio) then
 			return action.debuff
-		elseif (action.buff ~= nil) and (action.buff.prio < action.cure.prio) then
+		elseif (action.buff ~= nil) and ((action.buff.prio + 2) < action.cure.prio) then
 			return action.buff
 		end
 		return action.cure
@@ -107,8 +107,7 @@ function actions.take_action(player, partner, targ)
             local self_engaged = (player.status == 1)
             if (player.target_index == partner.target_index) then
                 if offense.assist.engage and partner_engaged and (not self_engaged) then
-                    windower.send_command('input /attack on')
-                    settings.actionDelay = 0.6
+                    healer.actor:send_cmd('input /attack on')
                 else
                     local action = actions.get_offensive_action()
                     if (action ~= nil) then
@@ -122,8 +121,7 @@ function actions.take_action(player, partner, targ)
                 end
             else                            --Different targets
                 if partner_engaged and (not self_engaged) then
-                    windower.send_command('input /as '..offense.assist.name)
-                    settings.actionDelay = 0.6
+                    healer.actor:send_cmd('input /as '..offense.assist.name)
                 end
             end
             offense.cleanup()

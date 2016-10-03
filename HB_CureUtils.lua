@@ -38,9 +38,10 @@ cu.waltzga = {
 }
 
 function cu.init_cure_potencies()
-    for spell_group,_ in pairs(hb_config.cure_potency) do
+    local potency_table = hb_config.cure_potency[healer.name] and hb_config.cure_potency[healer.name][healer.job] or hb_config.cure_potency.default
+    for spell_group,_ in pairs(potency_table) do
         for spell_tier,_ in pairs(cu[spell_group]) do
-            cu[spell_group][spell_tier].hp = hb_config.cure_potency[spell_group][spell_tier]
+            cu[spell_group][spell_tier].hp = potency_table[spell_group][spell_tier]
         end
     end
 end
