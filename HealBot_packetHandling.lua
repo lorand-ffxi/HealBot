@@ -1,7 +1,7 @@
 --==============================================================================
 --[[
-	Author: Ragnarok.Lorand
-	HealBot packet handling functions
+    Author: Ragnarok.Lorand
+    HealBot packet handling functions
 --]]
 --==============================================================================
 
@@ -12,116 +12,126 @@ local messages_completing = _libs.lor.packets.messages_completing
 local get_action_info = _libs.lor.packets.get_action_info
 
 --[[
-	Analyze the data contained in incoming packets for useful info.
-	:param int id: packet ID
-	:param data: raw packet contents
+    Analyze the data contained in incoming packets for useful info.
+    :param int id: packet ID
+    :param data: raw packet contents
 --]]
 function handle_incoming_chunk(id, data)
-	if S{0x28,0x29}:contains(id) then	--Action / Action Message
+    if S{0x28,0x29}:contains(id) then   --Action / Action Message
         local monitored_ids = hb.getMonitoredIds()
-		local ai = get_action_info(id, data)
+        local ai = get_action_info(id, data)
         healer.actor:update(id, ai)
-		if id == 0x28 then
-			processAction(ai, monitored_ids)
-		elseif id == 0x29 then
-			processMessage(ai, monitored_ids)
-		end
-	elseif (id == 0x0DD) then			--Party member update
-		local parsed = packets.parse('incoming', data)
-		local pmName = parsed.Name
-		local pmJobId = parsed['Main job']
-		local pmSubJobId = parsed['Sub job']
-		partyMemberInfo[pmName] = partyMemberInfo[pmName] or {}
-		partyMemberInfo[pmName].job = res.jobs[pmJobId].ens
-		partyMemberInfo[pmName].subjob = res.jobs[pmSubJobId].ens
-		--atc('Caught party member update packet for '..parsed.Name..' | '..parsed.ID)
-	elseif (id == 0x0DF) then
-		local player = windower.ffxi.get_player()
-		local parsed = packets.parse('incoming', data)
-		if (player ~= nil) and (player.id ~= parsed.ID) then
-			local person = windower.ffxi.get_mob_by_id(parsed.ID)
-			--atc('Caught char update packet for '..person.name)
-		end
-	end
+        if id == 0x28 then
+            processAction(ai, monitored_ids)
+        elseif id == 0x29 then
+            processMessage(ai, monitored_ids)
+        end
+    elseif (id == 0x0DD) then           --Party member update
+        local parsed = packets.parse('incoming', data)
+        local pmName = parsed.Name
+        local pmJobId = parsed['Main job']
+        local pmSubJobId = parsed['Sub job']
+        partyMemberInfo[pmName] = partyMemberInfo[pmName] or {}
+        partyMemberInfo[pmName].job = res.jobs[pmJobId].ens
+        partyMemberInfo[pmName].subjob = res.jobs[pmSubJobId].ens
+        --atc('Caught party member update packet for '..parsed.Name..' | '..parsed.ID)
+    elseif (id == 0x0DF) then
+        local player = windower.ffxi.get_player()
+        local parsed = packets.parse('incoming', data)
+        if (player ~= nil) and (player.id ~= parsed.ID) then
+            local person = windower.ffxi.get_mob_by_id(parsed.ID)
+            --atc('Caught char update packet for '..person.name)
+        end
+    end
 end
 
 
 --[[
-	Process the information that was parsed from an action message packet
-	:param ai: parsed action info
-	:param set monitored_ids: the IDs of PCs that are being monitored
+    Process the information that was parsed from an action message packet
+    :param ai: parsed action info
+    :param set monitored_ids: the IDs of PCs that are being monitored
 --]]
 function processMessage(ai, monitored_ids)
     if monitored_ids[ai.actor_id] or monitored_ids[ai.target_id] then
-		if not (messages_blacklist:contains(ai.message_id)) then
+        if not (messages_blacklist:contains(ai.message_id)) then
             local target = windower.ffxi.get_mob_by_id(ai.target_id)
             
-			if modes.showPacketInfo then
+            if modes.showPacketInfo then
                 local actor = windower.ffxi.get_mob_by_id(ai.actor_id)
-				local msg = res.action_messages[ai.message_id] or {en='???'}
+                local msg = res.action_messages[ai.message_id] or {en='???'}
                 local params = ', ':join(tostring(ai.param_1), tostring(ai.param_2), tostring(ai.param_3))
                 atcfs('[0x29]Message(%s): %s { %s } %s %s | %s', ai.message_id, actor.name, params, rarr, target.name, msg.en)
-			end
-			
-			if messages_wearOff:contains(ai.message_id) then
-				if enfeebling:contains(ai.param_1) then
-					buffs.register_debuff(target, res.buffs[ai.param_1], false)
-				else
-					buffs.register_buff(target, res.buffs[ai.param_1], false)
-				end
-			end
-		end--/message ID not on blacklist
-	end--/monitoring actor or target
+            end
+            
+            if messages_wearOff:contains(ai.message_id) then
+                if enfeebling:contains(ai.param_1) then
+                    buffs.register_debuff(target, res.buffs[ai.param_1], false)
+                else
+                    buffs.register_buff(target, res.buffs[ai.param_1], false)
+                end
+            end
+        end--/message ID not on blacklist
+    end--/monitoring actor or target
 end
 
 
 --[[
-	Process the information that was parsed from an action packet
-	:param ai: parsed action info
-	:param set monitored_ids: the IDs of PCs that are being monitored
+    Process the information that was parsed from an action packet
+    :param ai: parsed action info
+    :param set monitored_ids: the IDs of PCs that are being monitored
 --]]
 function processAction(ai, monitored_ids)
-	for _,targ in pairs(ai.targets) do
+    for _,targ in pairs(ai.targets) do
         if monitored_ids[ai.actor_id] or monitored_ids[targ.id] then
             local actor = windower.ffxi.get_mob_by_id(ai.actor_id)
             local target = windower.ffxi.get_mob_by_id(targ.id)
             
-			for _,tact in pairs(targ.actions) do
-				if not messages_blacklist:contains(tact.message_id) then
-					if modes.showPacketInfo then
-						local msg = res.action_messages[tact.message_id] or {en='???'}
+            for _,tact in pairs(targ.actions) do
+                if not messages_blacklist:contains(tact.message_id) then
+                
+                    -- if (tact.message_id == 0) and (actor.name == healer.name) then
+                        -- local spell = res.spells[ai.param]
+                        -- if spell ~= nil then
+                            -- if spell.type == 'Geomancy' then
+                                -- register_action(spell.type, ai.param)
+                            -- end
+                        -- end
+                    -- end
+                
+                    if modes.showPacketInfo then
+                        local msg = res.action_messages[tact.message_id] or {en='???'}
                         atcfs('[0x28]Action(%s): %s { %s } %s %s { %s } | %s', tact.message_id, actor.name, ai.param, rarr, target.name, tact.param, msg.en)
-					end
-					
-					registerEffect(ai, tact, actor, target, monitored_ids)
-				end--/message ID not on blacklist
-			end--/loop through targ's actions
-		end--/monitoring actor or target
-	end--/loop through action's targets
+                    end
+                    
+                    registerEffect(ai, tact, actor, target, monitored_ids)
+                end--/message ID not on blacklist
+            end--/loop through targ's actions
+        end--/monitoring actor or target
+    end--/loop through action's targets
 end
 
 
 --[[
-	Register the effects that were discovered in an action packet
+    Register the effects that were discovered in an action packet
     :param ai: parsed action info
-	:param tact: the subaction on a target
-	:param actor: the PC/NPC initiating the action
-	:param target: the PC/NPC that is the target of the action
-	:param set monitored_ids: the IDs of PCs that are being monitored
+    :param tact: the subaction on a target
+    :param actor: the PC/NPC initiating the action
+    :param target: the PC/NPC that is the target of the action
+    :param set monitored_ids: the IDs of PCs that are being monitored
 --]]
 function registerEffect(ai, tact, actor, target, monitored_ids)
     local targ_is_enemy = (target.spawn_type == 16)
     
     if (monitored_ids[actor.id] or monitored_ids[target.id]) then
-		if messages_magicDamage:contains(tact.message_id) then		--ai.param: spell; tact.param: damage
-			local spell = res.spells[ai.param]
-			if S{230,231,232,233,234}:contains(ai.param) then
-				buffs.register_debuff(target, 'Bio', true, spell)
-			elseif S{23,24,25,26,27,33,34,35,36,37}:contains(ai.param) then
-				buffs.register_debuff(target, 'Dia', true, spell)
-			end
-		elseif messages_gainEffect:contains(tact.message_id) then	--ai.param: spell; tact.param: buff/debuff
-			--{target} gains the effect of {buff} / {target} is {debuff}ed
+        if messages_magicDamage:contains(tact.message_id) then      --ai.param: spell; tact.param: damage
+            local spell = res.spells[ai.param]
+            if S{230,231,232,233,234}:contains(ai.param) then
+                buffs.register_debuff(target, 'Bio', true, spell)
+            elseif S{23,24,25,26,27,33,34,35,36,37}:contains(ai.param) then
+                buffs.register_debuff(target, 'Dia', true, spell)
+            end
+        elseif messages_gainEffect:contains(tact.message_id) then   --ai.param: spell; tact.param: buff/debuff
+            --{target} gains the effect of {buff} / {target} is {debuff}ed
             local cause = nil
             if msg_gain_abil:contains(tact.message_id) then
                 cause = res.job_abilities[ai.param]
@@ -131,49 +141,49 @@ function registerEffect(ai, tact, actor, target, monitored_ids)
                 cause = res.weapon_skills[ai.param]
             end
             
-			local buff = res.buffs[tact.param]
-			if enfeebling:contains(tact.param) then
-				buffs.register_debuff(target, buff, true, cause)
-			else
-				buffs.register_buff(target, buff, true, cause)
-			end
-		elseif messages_loseEffect:contains(tact.message_id) then	--ai.param: spell; tact.param: buff/debuff
-			--{target}'s {buff} wore off
-			local buff = res.buffs[tact.param]
-			if enfeebling:contains(tact.param) then
-				buffs.register_debuff(target, buff, false)
-			else
-				buffs.register_buff(target, buff, false)
-			end
-		elseif messages_noEffect:contains(tact.message_id) then		--ai.param: spell; tact.param: buff/debuff
-			--Spell had no effect on {target}
-			local spell = res.spells[ai.param]
-			if (spell ~= nil) then
-				if spells_statusRemoval:contains(spell.id) then
-					--The debuff must have worn off or have been removed already
-					local debuffs = removal_map[spell.en]
-					if (debuffs ~= nil) then
-						for _,debuff in pairs(debuffs) do
-							buffs.register_debuff(target, debuff, false)
-						end
-					end
-				elseif spells_buffs:contains(spell.id) then
-					--The buff must already be active, or there must be some debuff preventing the buff from landing
+            local buff = res.buffs[tact.param]
+            if enfeebling:contains(tact.param) then
+                buffs.register_debuff(target, buff, true, cause)
+            else
+                buffs.register_buff(target, buff, true, cause)
+            end
+        elseif messages_loseEffect:contains(tact.message_id) then   --ai.param: spell; tact.param: buff/debuff
+            --{target}'s {buff} wore off
+            local buff = res.buffs[tact.param]
+            if enfeebling:contains(tact.param) then
+                buffs.register_debuff(target, buff, false)
+            else
+                buffs.register_buff(target, buff, false)
+            end
+        elseif messages_noEffect:contains(tact.message_id) then     --ai.param: spell; tact.param: buff/debuff
+            --Spell had no effect on {target}
+            local spell = res.spells[ai.param]
+            if (spell ~= nil) then
+                if spells_statusRemoval:contains(spell.id) then
+                    --The debuff must have worn off or have been removed already
+                    local debuffs = removal_map[spell.en]
+                    if (debuffs ~= nil) then
+                        for _,debuff in pairs(debuffs) do
+                            buffs.register_debuff(target, debuff, false)
+                        end
+                    end
+                elseif spells_buffs:contains(spell.id) then
+                    --The buff must already be active, or there must be some debuff preventing the buff from landing
                     local buff = buffs.buff_for_action(spell)
-					if (buff == nil) then
-						atc(123, 'ERROR: No buff found for spell: '..spell.en)
-					else
-						buffs.register_buff(target, buff, false)
-						if S{'Haste','Flurry'}:contains(buff.en) then
-							buffs.register_debuff(target, 'slow', true)
-						end
-					end
+                    if (buff == nil) then
+                        atc(123, 'ERROR: No buff found for spell: '..spell.en)
+                    else
+                        buffs.register_buff(target, buff, false)
+                        if S{'Haste','Flurry'}:contains(buff.en) then
+                            buffs.register_debuff(target, 'slow', true)
+                        end
+                    end
                 elseif spell_debuff_idmap[spell.id] ~= nil and targ_is_enemy then
                     --The debuff already landed from someone else
                     local debuff_id = spell_debuff_idmap[spell.id]
                     buffs.register_debuff(target, debuff_id, true)
-				end
-			end
+                end
+            end
         elseif messages_specific_debuff_gain[tact.message_id] ~= nil then
             local gained_debuffs = messages_specific_debuff_gain[tact.message_id]
             for _,gained_debuff in pairs(gained_debuffs) do
@@ -184,21 +194,21 @@ function registerEffect(ai, tact, actor, target, monitored_ids)
             for _,lost_debuff in pairs(lost_debuffs) do
                 buffs.register_debuff(target, lost_debuff, false)
             end
-		elseif S{185}:contains(tact.message_id) then	--${actor} uses ${weapon_skill}.${lb}${target} takes ${number} points of damage.
-			local mabil = res.monster_abilities[ai.param]
-			if (mabil ~= nil) then
-				if (hb_config.mabil_debuffs[mabil.en] ~= nil) then
-					for dbf,_ in pairs(hb_config.mabil_debuffs[mabil.en]) do
-						buffs.register_debuff(target, dbf, true)
-					end
-				end
-			end
+        elseif S{185}:contains(tact.message_id) then    --${actor} uses ${weapon_skill}.${lb}${target} takes ${number} points of damage.
+            local mabil = res.monster_abilities[ai.param]
+            if (mabil ~= nil) then
+                if (hb_config.mabil_debuffs[mabil.en] ~= nil) then
+                    for dbf,_ in pairs(hb_config.mabil_debuffs[mabil.en]) do
+                        buffs.register_debuff(target, dbf, true)
+                    end
+                end
+            end
         elseif S{655}:contains(tact.message_id) and targ_is_enemy then    --${actor} casts ${spell}.${lb}${target} completely resists the spell.
             offense.register_immunity(target, res.buffs[tact.param])
         elseif messages_paralyzed:contains(tact.message_id) then
-			buffs.register_debuff(actor, 'paralysis', true)
-		end--/message ID checks
-	end
+            buffs.register_debuff(actor, 'paralysis', true)
+        end--/message ID checks
+    end
 end
 
 -----------------------------------------------------------------------------------------------------------

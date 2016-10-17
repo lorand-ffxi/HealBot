@@ -6,6 +6,9 @@ return {
     ['Broadleaf Palm'] = S{
         194
     },
+    ['Cloud of Darkness'] = S{
+        7
+    },
     ['Despot'] = S{
         194
     },

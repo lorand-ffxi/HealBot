@@ -303,6 +303,24 @@ function buffs.register_debuff(target, debuff, gain, action)
 end
 
 
+-- local last_action = {}
+-- function register_action(atype, aid)
+    -- last_action.type = atype
+    -- last_action.id = aid
+-- end
+
+-- windower.register_event('gain buff', function(buff_id)
+    -- atcfs('Gained: %s %s [Type: %s]', buff_id, res.buffs[buff_id].en, last_action.type)
+    -- if last_action.type == 'Geomancy' then
+        -- buffs.action_buff_map[last_action.type] = buffs.action_buff_map[last_action.type] or {}
+        -- if buffs.action_buff_map[last_action.type][last_action.id] == nil then
+            -- buffs.action_buff_map[last_action.type][last_action.id] = buff_id
+            -- buffs.action_buff_map:save(true)
+        -- end
+    -- end
+-- end)
+
+
 function buffs.register_buff(target, buff, gain, action)
 --local function _register_buff(target, buff, gain, action)
     --atcfs("%s -> %s [gain: %s]", buff, target.name, gain)

@@ -86,8 +86,7 @@ return {
             'Protectra V',
             'Shellra V',
             'Reraise III',
-            'Afflatus Solace',
-            'Aurorastorm'
+            'Afflatus Solace'
         }
     }
 }
