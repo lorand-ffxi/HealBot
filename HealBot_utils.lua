@@ -72,10 +72,8 @@ function processCommand(command,...)
     command = command and command:lower() or 'help'
     local args = map(windower.convert_auto_trans, {...})
     
-    if command == 'reload' then
-        windower.send_command('lua reload healBot')
-    elseif command == 'unload' then
-        windower.send_command('lua unload healBot')
+    if S{'reload','unload'}:contains(command) then
+        windower.send_command('lua %s %s':format(command, _addon.name))
     elseif command == 'refresh' then
         load_configs()
     elseif S{'start','on'}:contains(command) then
@@ -236,7 +234,7 @@ function processCommand(command,...)
         end
     elseif command == 'buff' then
         buffs.registerNewBuff(args, true)
-    elseif command == 'cancelbuff' then
+    elseif S{'cancelbuff','nobuff'}:contains(command) then
         buffs.registerNewBuff(args, false)
     elseif S{'bufflist','bl'}:contains(command) then
         if not validate(args, 1, 'Error: No argument specified for BuffList') then return end
@@ -317,7 +315,11 @@ end
 
 
 local function _get_player_id(player_name)
-    return windower.ffxi.get_mob_by_name(player_name).id
+    local player_mob = windower.ffxi.get_mob_by_name(player_name)
+    if player_mob then
+        return player_mob.id
+    end
+    return nil
 end
 utils.get_player_id = _libs.lor.advutils.scached(_get_player_id)
 
@@ -612,6 +614,11 @@ function utils.formatSpellName(text)
     local fromAlias = hb_config.aliases[text]
     if (fromAlias ~= nil) then
         return fromAlias
+    end
+    
+    local spell_from_lc = lc_spells[text:lower()]
+    if spell_from_lc ~= nil then
+        return spell_from_lc.en
     end
     
     local parts = text:split(' ')

@@ -4,6 +4,7 @@ return {
         194
     },
     ['Broadleaf Palm'] = S{
+        2,
         194
     },
     ['Cloud of Darkness'] = S{

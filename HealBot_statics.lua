@@ -120,6 +120,29 @@ roll_info = {
     ["Wizard's Roll"] =     {lucky=5,unlucky=9,effect='MAB ++'}
 }
 
+local function prep_geo_spells()
+    local geo_spells = {indi=S{},geo=S{}}
+    for sid, spell in pairs(res.spells) do
+        if spell.en:startswith('Indi-') then
+            geo_spells.indi:add(sid)
+        elseif spell.en:startswith('Geo-') then
+            geo_spells.geo:add(sid)
+        end
+    end
+    return geo_spells.indi, geo_spells.geo
+end
+indi_spell_ids, geo_spell_ids = prep_geo_spells()
+
+local function get_lc_spells()
+    local lc_spells = {}
+    for id, spell in pairs(res.spells) do
+        lc_spells[spell.en:lower()] = spell
+    end
+    return lc_spells
+end
+lc_spells = get_lc_spells()
+
+
 -----------------------------------------------------------------------------------------------------------
 --[[
 Copyright © 2016, Lorand

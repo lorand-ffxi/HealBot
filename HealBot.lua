@@ -1,18 +1,29 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.12.0'
-_addon.lastUpdate = '2016.10.02.0'
+_addon.version = '2.13.0'
+_addon.lastUpdate = '2016.10.27.0'
+
+--[[
+TODO:
+- Global action queue instead of rebuilding every cycle
+- Action sets that must be performed together (e.g., Snake Eye, then Double Up)
+- GEO
+- COR
+    - Rolled # detection
+--]]
+
 
 require('luau')
 require('lor/lor_utils')
 _libs.lor.include_addon_name = true
-_libs.lor.req('all', {n='packets',v='2016.10.02.0'})
+_libs.lor.req('all', {n='packets',v='2016.10.27.0'})
 _libs.req('queues')
 lor_settings = _libs.lor.settings
 serialua = _libs.lor.serialization
 
-healer = {}
+hb = {}
+healer = {indi={},geo={}}
 
 res = require('resources')
 config = require('config')
@@ -33,7 +44,6 @@ require('HealBot_followHandling')
 require('HealBot_packetHandling')
 require('HealBot_queues')
 
-hb = {}
 
 local _events = {}
 local ipc_req = serialua.encode({method='GET', pk='buff_ids'})

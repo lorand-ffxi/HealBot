@@ -35,13 +35,30 @@ function buffs.review_active_buffs(player, buff_list)
 				buffs.register_buff(player, buff, true)
 			end
 		end
+        
 		--Double check the list of what should be active
 		local checklist = buffs.buffList[player.name] or {}
 		local active = S(buff_list)
 		for bname,binfo in pairs(checklist) do
-			if not active:contains(binfo.buff.id) then
-				buffs.register_buff(player, res.buffs[binfo.buff.id], false)
-			end
+            if binfo.is_geo or binfo.is_indi then
+                if binfo.is_geo and binfo.action then
+                    local pet = windower.ffxi.get_mob_by_target('pet')
+                    healer.geo.latest = healer.geo.latest or {}
+                    if pet == nil then
+                        buffs.register_buff(player, healer.geo.latest, false)
+                    else
+                        buffs.register_buff(player, healer.geo.latest, true)
+                    end
+                elseif binfo.is_indi and binfo.action then
+                    healer.indi.info = healer.indi.info or {}
+                    healer.indi.latest = healer.indi.latest or {}
+                    buffs.register_buff(player, healer.indi.latest, healer.indi.info.active)
+                end
+			else
+                if not active:contains(binfo.buff.id) then
+                    buffs.register_buff(player, res.buffs[binfo.buff.id], false)
+                end
+            end
 		end
     end
 end
@@ -59,7 +76,7 @@ function buffs.getBuffQueue()
     for targ, buffset in pairs(buffs.buffList) do
         for spell_name, info in pairs(buffset) do
             if (targ == healer.name) then
-                if (activeBuffIds:contains(info.buff.id)) then
+                if activeBuffIds:contains(info.buff.id) then
                     buffs.register_buff(player, res.buffs[info.buff.id], true)
                 end
             end
@@ -151,6 +168,13 @@ function buffs.registerNewBuffName(targetName, bname, use)
     
     if use then
         buffs.buffList[target.name][action.en] = {['action']=action, ['maintain']=true, ['buff']=buff}
+        if action.type == 'Geomancy' then
+            if indi_spell_ids:contains(action.id) then
+                buffs.buffList[target.name][action.en].is_indi = true
+            elseif geo_spell_ids:contains(action.id) then
+                buffs.buffList[target.name][action.en].is_geo = true
+            end
+        end
         atc('Will maintain buff: '..action.en..' '..rarr..' '..target.name)
     else
         buffs.buffList[target.name][action.en] = nil
@@ -208,7 +232,17 @@ end
 
 function buffs.buff_for_action(action)
     local action_str = action
+    if type(action) == 'string' then
+        if action:startswith('Geo-') or action:startswith('Indi-') then
+            action = lc_spells[action:lower()]
+        end
+    end
     if type(action) == 'table' then
+        if action.type == 'Geomancy' then
+            --This is a hack since there isn't a 1:1 relationship between geo spells and buffs
+            return {id=-action.id, en=action.en, enl=action.en}
+        end
+    
         if buffs.action_buff_map[action.type] ~= nil then
             local mapped_id = buffs.action_buff_map[action.type][action.id]
             if mapped_id ~= nil then
@@ -324,6 +358,18 @@ end
 function buffs.register_buff(target, buff, gain, action)
 --local function _register_buff(target, buff, gain, action)
     --atcfs("%s -> %s [gain: %s]", buff, target.name, gain)
+    if buff.is_indi or buff.is_geo then
+        buffs.buffList[target.name] = buffs.buffList[target.name] or {}
+        buffs.buffList[target.name][buff.spell.en] = buffs.buffList[target.name][buff.spell.en] or {}
+        buffs.buffList[target.name][buff.spell.en] = buffs.buffList[target.name][buff.spell.en] or {}
+        if gain then
+            buffs.buffList[target.name][buff.spell.en].landed = os.clock()
+        else
+            buffs.buffList[target.name][buff.spell.en].landed = nil
+        end
+        return
+    end
+    
     local nbuff = utils.normalize_action(buff, 'buffs')
     if nbuff == nil then
         atcfs(123,'Error normalizing buff: %s', buff)
