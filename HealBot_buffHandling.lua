@@ -17,10 +17,10 @@ local buffs = {
 --==============================================================================
 
 function buffs.checkOwnBuffs()
-	local player = windower.ffxi.get_player()
-	if (player ~= nil) then
+    local player = windower.ffxi.get_player()
+    if (player ~= nil) then
         buffs.review_active_buffs(player, player.buffs)
-	end
+    end
 end
 
 
@@ -28,18 +28,18 @@ function buffs.review_active_buffs(player, buff_list)
     if buff_list ~= nil then
         --Register everything that's actually active
         for _,bid in pairs(buff_list) do
-			local buff = res.buffs[bid]
-			if (enfeebling:contains(bid)) then
-				buffs.register_debuff(player, buff, true)
-			else
-				buffs.register_buff(player, buff, true)
-			end
-		end
+            local buff = res.buffs[bid]
+            if (enfeebling:contains(bid)) then
+                buffs.register_debuff(player, buff, true)
+            else
+                buffs.register_buff(player, buff, true)
+            end
+        end
         
-		--Double check the list of what should be active
-		local checklist = buffs.buffList[player.name] or {}
-		local active = S(buff_list)
-		for bname,binfo in pairs(checklist) do
+        --Double check the list of what should be active
+        local checklist = buffs.buffList[player.name] or {}
+        local active = S(buff_list)
+        for bname,binfo in pairs(checklist) do
             if binfo.is_geo or binfo.is_indi then
                 if binfo.is_geo and binfo.action then
                     local pet = windower.ffxi.get_mob_by_target('pet')
@@ -54,12 +54,12 @@ function buffs.review_active_buffs(player, buff_list)
                     healer.indi.latest = healer.indi.latest or {}
                     buffs.register_buff(player, healer.indi.latest, healer.indi.info.active)
                 end
-			else
+            else
                 if not active:contains(binfo.buff.id) then
                     buffs.register_buff(player, res.buffs[binfo.buff.id], false)
                 end
             end
-		end
+        end
     end
 end
 
@@ -358,16 +358,18 @@ end
 function buffs.register_buff(target, buff, gain, action)
 --local function _register_buff(target, buff, gain, action)
     --atcfs("%s -> %s [gain: %s]", buff, target.name, gain)
-    if buff.is_indi or buff.is_geo then
-        buffs.buffList[target.name] = buffs.buffList[target.name] or {}
-        buffs.buffList[target.name][buff.spell.en] = buffs.buffList[target.name][buff.spell.en] or {}
-        buffs.buffList[target.name][buff.spell.en] = buffs.buffList[target.name][buff.spell.en] or {}
-        if gain then
-            buffs.buffList[target.name][buff.spell.en].landed = os.clock()
-        else
-            buffs.buffList[target.name][buff.spell.en].landed = nil
+    if not isstr(buff) then
+        if buff.is_indi or buff.is_geo then
+            buffs.buffList[target.name] = buffs.buffList[target.name] or {}
+            buffs.buffList[target.name][buff.spell.en] = buffs.buffList[target.name][buff.spell.en] or {}
+            buffs.buffList[target.name][buff.spell.en] = buffs.buffList[target.name][buff.spell.en] or {}
+            if gain then
+                buffs.buffList[target.name][buff.spell.en].landed = os.clock()
+            else
+                buffs.buffList[target.name][buff.spell.en].landed = nil
+            end
+            return
         end
-        return
     end
     
     local nbuff = utils.normalize_action(buff, 'buffs')

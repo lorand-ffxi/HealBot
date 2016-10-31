@@ -3,6 +3,9 @@ return {
         4,
         194
     },
+    ['Bozzetto Necronura'] = S{
+        7
+    },
     ['Broadleaf Palm'] = S{
         2,
         194
