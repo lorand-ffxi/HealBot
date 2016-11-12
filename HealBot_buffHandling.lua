@@ -295,6 +295,11 @@ end
 --]]
 function buffs.register_debuff(target, debuff, gain, action)
     debuff = utils.normalize_action(debuff, 'buffs')
+    
+    if debuff == nil then
+        return              --hack
+    end
+    
     if debuff.enn == 'slow' then
         buffs.register_buff(target, 'Haste', false)
         buffs.register_buff(target, 'Flurry', false)

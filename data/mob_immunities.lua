@@ -16,6 +16,9 @@ return {
     ['Despot'] = S{
         194
     },
+    ['Dhorme Khimaira'] = S{
+        13
+    },
     ['Dimensional Tether'] = S{
         194
     },

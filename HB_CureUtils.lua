@@ -124,29 +124,33 @@ function cu.pick_best_curaga_possibility()
     local best = {}
     local coverage, distances = LT(), LT()
     for memberA, a in pairs(members) do
-        coverage[memberA] = LT{memberA}
-        distances[memberA] = LT()
-        for memberB, b in pairs(members) do
-            if memberA ~= memberB then
-                local dist = a.pos:getDistance(b.pos)
-                distances[memberA]:insert(dist)
-                if dist < 10 then
-                    coverage[memberA]:insert(memberB)
+        if a then
+            coverage[memberA] = LT{memberA}
+            distances[memberA] = LT()
+            for memberB, b in pairs(members) do
+                if b then
+                    if memberA ~= memberB then
+                        local dist = a.pos:getDistance(b.pos)
+                        distances[memberA]:insert(dist)
+                        if dist < 10 then
+                            coverage[memberA]:insert(memberB)
+                        end
+                    end
                 end
             end
+            local furthest = distances[memberA]:max()
+            local avg_dist = distances[memberA]:sum() / distances[memberA]:size()
+            local farA = {memberA, furthest}
+            local avgA = {memberA, avg_dist}
+            local covA = {memberA, coverage[memberA]}
+            best.far = best.far or farA
+            best.far = (furthest < best.far[2]) and farA or best.far
+            best.avg = best.avg or avgA
+            best.avg = (avg_dist < best.avg[2]) and avgA or best.avg
+            best.cov = best.cov or covA
+            best.cov = (coverage[memberA]:size() > best.cov[2]:size()) and covA or best.cov
+            if furthest < 10 then break end    --Everyone is close enough
         end
-        local furthest = distances[memberA]:max()
-        local avg_dist = distances[memberA]:sum() / distances[memberA]:size()
-        local farA = {memberA, furthest}
-        local avgA = {memberA, avg_dist}
-        local covA = {memberA, coverage[memberA]}
-        best.far = best.far or farA
-        best.far = (furthest < best.far[2]) and farA or best.far
-        best.avg = best.avg or avgA
-        best.avg = (avg_dist < best.avg[2]) and avgA or best.avg
-        best.cov = best.cov or covA
-        best.cov = (coverage[memberA]:size() > best.cov[2]:size()) and covA or best.cov
-        if furthest < 10 then break end    --Everyone is close enough
     end
     if best.cov[2]:size() < too_few then return nil end
     local best_cov_count = best.cov[2]:size()

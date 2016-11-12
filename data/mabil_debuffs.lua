@@ -9,6 +9,9 @@ return {
     ['Black Cloud'] = S{
         'blindness'
     },
+    ['Bubble Shower'] = S{
+        'STR Down'
+    },
     ['Calcifying Claw'] = S{
         'petrification'
     },
@@ -24,6 +27,7 @@ return {
         'silence'
     },
     ['Dread Dive'] = S{'Attack Down'},
+    ['Envoutement'] = S{'curse'},
     ['Foul Waters'] = S{
         'weight'
     },

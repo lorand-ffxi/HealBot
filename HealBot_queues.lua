@@ -138,6 +138,9 @@ local function _getPlayerPriority(tname)
     end
     local prios = hb_config.priorities
     local player_mob = windower.ffxi.get_mob_by_name(tname)
+    if player_mob == nil then
+        return prios.default
+    end
     if player_mob.spawn_type == 14 then     --Trust
         return prios.default + 1
     end
