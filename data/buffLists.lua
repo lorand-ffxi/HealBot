@@ -56,7 +56,7 @@ return {
             'Aquaveil',
             'Protectra V',
             'Shellra V',
-            'Reraise III',
+            'Reraise IV',
             'Afflatus Solace'
         }
     },
@@ -71,7 +71,7 @@ return {
             'Protectra V',
             'Shellra V',
             'Phalanx',
-            'Reraise III',
+            'Reraise IV',
             'Afflatus Solace'
         }
     },
@@ -85,7 +85,7 @@ return {
             'Aquaveil',
             'Protectra V',
             'Shellra V',
-            'Reraise III',
+            'Reraise IV',
             'Afflatus Solace'
         }
     }

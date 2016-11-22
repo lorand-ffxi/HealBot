@@ -163,14 +163,14 @@ function cu.pick_best_curaga_possibility()
         best_target = best.cov[1]
     end
     local w_missing, w_hpp = cu.get_weighted_curaga_hp(members, coverage[best_target])
-    local tier = cu.get_cure_tier_for_hp(w_missing, 'curaga')
+    local tier = cu.get_cure_tier_for_hp(w_missing, settings.healing.modega)
     local min_hpp = 100
     for _,name in pairs(coverage[best_target]) do
         min_hpp = min(min_hpp, members[name].hpp)
     end
     min_hpp = min_hpp * 0.7 --add extra weight
     local target = {name=best_target, missing=w_missing, hpp=min_hpp}
-    return cu.get_usable_cure(tier, 'curaga'), target
+    return cu.get_usable_cure(tier, settings.healing.modega), target
 end
 
 
@@ -179,9 +179,9 @@ function cu.get_cure_queue()
     local hp_table = cu.get_missing_hps()
     for name,p in pairs(hp_table) do
         if p.hpp < 95 then
-            local tier = cu.get_cure_tier_for_hp(p.missing, 'cure')
-            if tier >= settings.healing.min.cure then
-                local spell = cu.get_usable_cure(tier, 'cure')
+            local tier = cu.get_cure_tier_for_hp(p.missing, settings.healing.mode)
+            if tier >= settings.healing.min[settings.healing.mode] then
+                local spell = cu.get_usable_cure(tier, settings.healing.mode)
                 if spell ~= nil then
                     cq:enqueue('cure', spell, name, p.hpp, ' (%s)':format(p.missing))
                 end
@@ -266,9 +266,14 @@ function cu.get_usable_cure(orig_tier, cure_type)
         local action = ctable[tier].res
         local rctime = recasts[action.recast_id] or 0               --Cooldown remaining for current tier
         local cost = action[_p..'_cost']                            --Cost of current tier in MP/TP
+        local mod_cost = cost * mult
         
-        if ((cost * mult) <= player_p) and (rctime == 0) then       --Sufficient MP/TP and cooldown is ready
+        if (mod_cost <= player_p) and (rctime == 0) then       --Sufficient MP/TP and cooldown is ready
             break
+        else
+            if tier == 1 then
+                return nil
+            end
         end
         tier = tier - 1
     end

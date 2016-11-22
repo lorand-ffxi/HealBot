@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.13.2'
-_addon.lastUpdate = '2016.11.12.0'
+_addon.version = '2.13.3'
+_addon.lastUpdate = '2016.11.21.0'
 
 --[[
 TODO:
@@ -204,7 +204,15 @@ function hb.activate()
             settings.healing.max[cure_type] = CureUtils.highest_tier(cure_type)
         end
         if (settings.healing.max.cure == 0) then
-            disableCommand('cure', true)
+            if settings.healing.max.waltz > 0 then
+                settings.healing.mode = 'waltz'
+                settings.healing.modega = 'waltzga'
+            else
+                disableCommand('cure', true)
+            end
+        else
+            settings.healing.mode = 'cure'
+            settings.healing.modega = 'curaga'
         end
         active = true
     end

@@ -166,6 +166,7 @@ function actions.get_offensive_action()
             local partner = getPartyMember(pname)
             if (partner ~= nil) then
                 partner_ok = partner.tp >= settings.ws.partner.tp
+                --partner_ok = partner.tp <= 500
             else
                 partner_ok = false
                 atc(123,'Unable to locate weaponskill partner '..pname)
