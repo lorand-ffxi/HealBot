@@ -121,7 +121,7 @@ function actions.take_action(player, partner, targ)
                         healer.actor:send_cmd('input /as '..offense.assist.name)
                     end
                 end
-            elseif self_engaged then
+            elseif self_engaged and modes.independent then
                 perform_action(actions.get_offensive_action(player))
             end
             offense.cleanup()
