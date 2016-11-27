@@ -82,13 +82,14 @@ function actions.get_defensive_action()
 end
 
 
-local function perform_action(action)
+local function perform_action(action, target_str)
     if action == nil then return end
     local act = action.action
     local target_name = action.name
     local msg = action.msg or ''
+    target_str = target_str or target_name
     atcd(act.en..sparr..target_name..msg)   --Debug message
-    wcmd(act.prefix, act.en, '<t>')         --Send cmd to windower
+    wcmd(act.prefix, act.en, target_str)    --Send cmd to windower
 end
 
 
@@ -114,7 +115,7 @@ function actions.take_action(player, partner, targ)
                     if offense.assist.engage and partner_engaged and (not self_engaged) then
                         healer.actor:send_cmd('input /attack on')
                     else
-                        perform_action(actions.get_offensive_action(player))
+                        perform_action(actions.get_offensive_action(player), '<t>')
                     end
                 else                            --Different targets
                     if partner_engaged and (not self_engaged) then
@@ -122,7 +123,7 @@ function actions.take_action(player, partner, targ)
                     end
                 end
             elseif self_engaged and modes.independent then
-                perform_action(actions.get_offensive_action(player))
+                perform_action(actions.get_offensive_action(player), '<t>')
             end
             offense.cleanup()
         end
