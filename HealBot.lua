@@ -1,8 +1,8 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.version = '2.13.3'
-_addon.lastUpdate = '2016.11.21.0'
+_addon.version = '2.13.4'
+_addon.lastUpdate = '2016.11.27.0'
 
 --[[
 TODO:
@@ -39,7 +39,7 @@ files = require('files')
 require 'HealBot_statics'
 require 'HealBot_utils'
 
-Assert =    require('HB_Assertion')
+Assert = require('HB_Assertion')
 CureUtils = require('HB_CureUtils')
 offense = require('HB_Offense')
 actions = require('HB_Actions')
@@ -67,11 +67,11 @@ _events['load'] = windower.register_event('load', function()
         windower.add_to_chat(39,'ERROR: .../Windower/addons/libs/lor/ not found! Please download: https://github.com/lorand-ffxi/lor_libs')
     end
     atcc(262,'Welcome to HealBot! To see a list of commands, type //hb help')
-    atcc(39,'=':rep(80))
-    atcc(261,'WARNING: I switched the config files from XMLs to lua files.')
-    atcc(261,'You will need to update the lua files with any custom settings you had in your XMLs!')
-    atcc(261,'I apologize for the inconvenience; this makes many things easier behind the scenes.')
-    atcc(39,'=':rep(80))
+    --atcc(39,'=':rep(80))
+    --atcc(261,'WARNING: I switched the config files from XMLs to lua files.')
+    --atcc(261,'You will need to update the lua files with any custom settings you had in your XMLs!')
+    --atcc(261,'I apologize for the inconvenience; this makes many things easier behind the scenes.')
+    --atcc(39,'=':rep(80))
 
     local now = os.clock()
     healer.zone_enter = now - 25
@@ -151,28 +151,30 @@ _events['render'] = windower.register_event('prerender', function()
     if (player ~= nil) and can_act_statuses:contains(player.status) then
         local partner,targ = offense.assistee_and_target()
         Assert.follow_target_exists()   --Attempts to prevent autorun problems
-        if (settings.follow.active or offense.assist.active) and ((now - healer.lastMoveCheck) > settings.follow.delay) then
-            local should_move = false
-            if (targ ~= nil) and (player.target_index == partner.target_index) then
-                if offense.assist.engage and (partner.status == 1) then
-                    if needToMove(targ.id, 3) then
-                        should_move = true
-                        moveTowards(targ.id)
+        if Assert.auto_movement_active() then
+            if ((now - healer.lastMoveCheck) > settings.follow.delay) then
+                local should_move = false
+                if (targ ~= nil) and (player.target_index == partner.target_index) then
+                    if offense.assist.engage and (partner.status == 1) then
+                        if needToMove(targ.id, 3) then
+                            should_move = true
+                            moveTowards(targ.id)
+                        end
                     end
                 end
-            end
-            if (not should_move) and settings.follow.active and needToMove(settings.follow.target, settings.follow.distance) then
-                should_move = true
-                moveTowards(settings.follow.target)
-            end
-            if (not should_move) then
-                if settings.follow.active then
-                    windower.ffxi.run(false)
+                if (not should_move) and settings.follow.active and needToMove(settings.follow.target, settings.follow.distance) then
+                    should_move = true
+                    moveTowards(settings.follow.target)
                 end
-            else
-                moving = true
+                if (not should_move) then
+                    if settings.follow.active then
+                        windower.ffxi.run(false)
+                    end
+                else
+                    moving = true
+                end
+                healer.lastMoveCheck = now      --Refresh stored movement check time
             end
-            healer.lastMoveCheck = now      --Refresh stored movement check time
         end
         
         if active and not (moving or acting) then
@@ -193,6 +195,9 @@ end)
 
 function wcmd(prefix, action, target)
     healer.actor:send_cmd('input %s "%s" "%s"':format(prefix, action, target))
+    if action:lower():contains('waltz') then
+        healer.actor.action_delay = 2.75
+    end
 end
 
 
@@ -200,7 +205,7 @@ function hb.activate()
     local player = windower.ffxi.get_player()
     if player ~= nil then
         settings.healing.max = {}
-        for _,cure_type in pairs({'cure','waltz','curaga','waltzga'}) do
+        for _,cure_type in pairs(CureUtils.cure_types) do
             settings.healing.max[cure_type] = CureUtils.highest_tier(cure_type)
         end
         if (settings.healing.max.cure == 0) then

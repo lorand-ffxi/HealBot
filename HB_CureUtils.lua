@@ -5,7 +5,7 @@
 --]]
 --==============================================================================
 
-local cu = {}
+local cu = {cure_types={'cure','waltz','curaga','waltzga'}}
 
 --==============================================================================
 --                  Static Cure Information
@@ -188,7 +188,7 @@ function cu.get_cure_queue()
             end
         end
     end
-    if (not settings.disable.curaga) and (settings.healing.max.curaga > 0) then
+    if (not settings.disable.curaga) and (settings.healing.max[settings.healing.modega] > 0) then
         local spell, p = cu.pick_best_curaga_possibility()
         if spell ~= nil then
             cq:enqueue('cure', spell, p.name, p.hpp, ' (%s)':format(p.missing))
@@ -197,7 +197,9 @@ function cu.get_cure_queue()
     return cq:getQueue()
 end
 
-
+--[[
+    Determines the MP/TP multiplier in effect for the given cure_type based on job and active buffs.
+--]]
 function cu.get_multiplier(cure_type)
     local mult = 1
     if cure_type:startswith('waltz') then
@@ -224,6 +226,7 @@ end
 
 --[[
     Determines the tier of cure_type to use for the given amount of missing HP.
+    Whether or not to accept this tier, based on settings.healing.min[cure_type], is handled elsewhere.
 --]]
 function cu.get_cure_tier_for_hp(hp_missing, cure_type)
     local tier = settings.healing.max[cure_type]
@@ -244,12 +247,10 @@ end
     Returns resource info for the chosen cure/waltz tier
 --]]
 function cu.get_usable_cure(orig_tier, cure_type)
-    local minTier = settings.healing.min[cure_type]
-    if orig_tier < minTier then return nil end
+    if orig_tier < settings.healing.min[cure_type] then return nil end
     
-    local ctable = cu[cure_type]
     local player = windower.ffxi.get_player()
-    
+    local mult = cu.get_multiplier(cure_type)
     local _p, recasts
     if cure_type:startswith('waltz') then
         _p = 'tp'
@@ -258,26 +259,18 @@ function cu.get_usable_cure(orig_tier, cure_type)
         _p = 'mp'
         recasts = windower.ffxi.get_spell_recasts()
     end
-    local player_p = player.vitals[_p]
-    local mult = cu.get_multiplier(cure_type)
-
+    
     local tier = orig_tier
-    while (tier > 1) do
-        local action = ctable[tier].res
+    while tier > 1 do
+        local action = cu[cure_type][tier].res
         local rctime = recasts[action.recast_id] or 0               --Cooldown remaining for current tier
-        local cost = action[_p..'_cost']                            --Cost of current tier in MP/TP
-        local mod_cost = cost * mult
-        
-        if (mod_cost <= player_p) and (rctime == 0) then       --Sufficient MP/TP and cooldown is ready
-            break
-        else
-            if tier == 1 then
-                return nil
-            end
+        local mod_cost = action[_p..'_cost'] * mult                 --Modified cost of current tier in MP/TP
+        if (mod_cost <= player.vitals[_p]) and (rctime == 0) then   --Sufficient MP/TP and cooldown is ready
+            return action
         end
         tier = tier - 1
     end
-    return ctable[tier].res
+    return nil
 end
 
 

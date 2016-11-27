@@ -8,6 +8,7 @@
 --==============================================================================
 
 utils = {normalize={}}
+local action_resource_types = {'spells','job_abilities','weapon_skills'}
 
 
 function utils.normalize_str(str)
@@ -326,46 +327,46 @@ utils.get_player_id = _libs.lor.advutils.scached(_get_player_id)
 
 function utils.register_offensive_debuff(args, cancel)
     local argstr = table.concat(args,' ')
-    local spell_name = utils.formatSpellName(argstr)
+    local spell_name = utils.formatActionName(argstr)
     local spell = getActionFor(spell_name)
     if (spell ~= nil) then
         if Assert.can_use(spell) then
             offense.maintain_debuff(spell, cancel)
         else
-            atc(123,'Error: Unable to cast '..spell.en)
+            atcfs(123,'Error: Unable to cast %s', spell.en)
         end
     else
-        atc(123,'Error: Invalid spell name: '..spell_name)
+        atcfs(123,'Error: Invalid spell name: %s', spell_name)
     end
 end
 
 
 function utils.register_spam_spell(args)
     local argstr = table.concat(args,' ')
-    local spell_name = utils.formatSpellName(argstr)
+    local spell_name = utils.formatActionName(argstr)
     local spell = getActionFor(spell_name)
     if (spell ~= nil) then
         if Assert.can_use(spell) then
             settings.nuke.name = spell.en
-            atc('Will now spam '..settings.nuke.name)
+            atcfs('Will now spam %s', settings.nuke.name)
         else
-            atc(123,'Error: Unable to cast '..spell.en)
+            atcfs(123,'Error: Unable to cast %s', spell.en)
         end
     else
-        atc(123,'Error: Invalid spell name: '..spell_name)
+        atcfs(123,'Error: Invalid spell name: %s', spell_name)
     end
 end
 
 
 function utils.register_ws(args)
     local argstr = table.concat(args,' ')
-    local wsname = utils.formatSpellName(argstr)
-    local ws = getActionFor(wsname)
+    local wsname = utils.formatActionName(argstr)
+    local ws = utils.getActionFor(wsname)
     if (ws ~= nil) then
-        settings.ws.name = wsname
-        atc('Will now use '..wsname)
+        settings.ws.name = ws.en
+        atcfs('Will now use %s', ws.en)
     else
-        atc(123,'Error: Invalid weaponskill name: '..wsname)
+        atcfs(123,'Error: Invalid weaponskill name: %s', wsname)
     end
 end
 
@@ -585,20 +586,11 @@ end
 --[[
     Returns the resource information for the given spell or ability name
 --]]
-function getActionFor(actionName)
-    local spell = res.spells:with('en', actionName)
-    local abil = res.job_abilities:with('en', actionName)
-    local ws = res.weapon_skills:with('en', actionName)
-    
-    local found = spell or abil or ws or nil
-    if found ~= nil then
-        return found
-    end
-    
+function utils.getActionFor(actionName)
     local lower_name = actionName:lower()
-    for _,ws in pairs(res.weapon_skills) do
-        if ws.en:lower() == lower_name then
-            return ws
+    for _,artype in pairs(action_resource_types) do
+        if lc_res[artype][lower_name] ~= nil then
+            return lc_res[artype][lower_name]
         end
     end
     return nil
@@ -608,7 +600,7 @@ end
 --          String Formatting Functions
 --==============================================================================
 
-function utils.formatSpellName(text)
+function utils.formatActionName(text)
     if (type(text) ~= 'string') or (#text < 1) then return nil end
     
     local fromAlias = hb_config.aliases[text]
@@ -616,7 +608,7 @@ function utils.formatSpellName(text)
         return fromAlias
     end
     
-    local spell_from_lc = lc_spells[text:lower()]
+    local spell_from_lc = lc_res.spells[text:lower()]
     if spell_from_lc ~= nil then
         return spell_from_lc.en
     end

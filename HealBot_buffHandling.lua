@@ -132,7 +132,7 @@ function buffs.registerNewBuff(args, use)
 end
 
 function buffs.registerNewBuffName(targetName, bname, use)
-    local spellName = utils.formatSpellName(bname)
+    local spellName = utils.formatActionName(bname)
     if (spellName == nil) then
         atc('Error: Unable to parse spell name')
         return
@@ -234,7 +234,7 @@ function buffs.buff_for_action(action)
     local action_str = action
     if type(action) == 'string' then
         if action:startswith('Geo-') or action:startswith('Indi-') then
-            action = lc_spells[action:lower()]
+            action = lc_res.spells[action:lower()]
         end
     end
     if type(action) == 'table' then

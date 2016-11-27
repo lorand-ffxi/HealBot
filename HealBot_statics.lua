@@ -133,14 +133,20 @@ local function prep_geo_spells()
 end
 indi_spell_ids, geo_spell_ids = prep_geo_spells()
 
-local function get_lc_spells()
-    local lc_spells = {}
-    for id, spell in pairs(res.spells) do
-        lc_spells[spell.en:lower()] = spell
+--Lower case resources
+local function get_lc_resources()
+    local targets = {'spells','job_abilities','weapon_skills'}
+    local lc_resources = {}
+    for _,target in pairs(targets) do
+        for id,action in pairs(res[target]) do
+            local action_name = action.en:lower()
+            lc_resources[action_name] = action
+            lc_resources[action_name].ja = nil
+        end
     end
-    return lc_spells
+    return lc_resources
 end
-lc_spells = get_lc_spells()
+lc_res = get_lc_resources()
 
 
 -----------------------------------------------------------------------------------------------------------

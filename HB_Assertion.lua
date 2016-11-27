@@ -133,6 +133,10 @@ function as.follow_target_exists()
     end
 end
 
+function as.auto_movement_active()
+    return settings.follow.active or (offense.assist.active and offense.assist.engage)
+end
+
 return as
 
 --======================================================================================================================
