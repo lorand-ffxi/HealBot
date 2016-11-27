@@ -12,7 +12,7 @@ return {
         }
     },
     ['ignoreTrusts'] = false,
-    ['nuke'] = {
+    ['spam'] = {
         ['name'] = 'Stone'
     },
     ['textBoxes'] = {

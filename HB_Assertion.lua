@@ -10,16 +10,16 @@ local as = {}
 --[[
     Returns true if the given spell/ability has been learned and is available on the current job.
 --]]
-function as.can_use(spell)
-    local player = windower.ffxi.get_player()
-    if (player == nil) or (spell == nil) then return false end
-    if S{'/magic','/ninjutsu','/song'}:contains(spell.prefix) then
-        local learned = windower.ffxi.get_spells()[spell.id]
+function as.can_use(action, player)
+    player = player or windower.ffxi.get_player()
+    if (player == nil) or (action == nil) then return false end
+    if S{'/magic','/ninjutsu','/song'}:contains(action.prefix) then
+        local learned = windower.ffxi.get_spells()[action.id]
         if learned then
             local mj_id, sj_id = player.main_job_id, player.sub_job_id
             local jp_spent = player.job_points[player.main_job:lower()].jp_spent
-            local mj_req = spell.levels[mj_id]
-            local sj_req = spell.levels[sj_id]
+            local mj_req = action.levels[mj_id]
+            local sj_req = action.levels[sj_id]
             local mainCanCast, subCanCast = false, false
             if mj_req ~= nil then
                 mainCanCast = (mj_req <= player.main_job_level) or (mj_req <= jp_spent)
@@ -30,17 +30,17 @@ function as.can_use(spell)
             return mainCanCast or subCanCast
         else
             if modes.debug then
-                atcf('%s has not learned %s', player.name, spell.en)
+                atcf('%s has not learned %s', player.name, action.en)
             end
         end
-    elseif S{'/jobability','/pet'}:contains(spell.prefix) then
+    elseif S{'/jobability','/pet'}:contains(action.prefix) then
         local available_jas = S(windower.ffxi.get_abilities().job_abilities)
-        return available_jas:contains(spell.id)
-    elseif (spell.prefix == '/weaponskill') then
+        return available_jas:contains(action.id)
+    elseif (action.prefix == '/weaponskill') then
         local available_wss = S(windower.ffxi.get_abilities().weapon_skills)
-        return available_wss:contains(spell.id)
+        return available_wss:contains(action.id)
     else
-        atc(123,'Error: Unknown spell prefix ('..tostring(spell.prefix)..') for '..tostring(spell.en))
+        atc(123,'Error: Unknown action prefix ('..tostring(action.prefix)..') for '..tostring(action.en))
     end
     return false
 end
@@ -49,17 +49,17 @@ end
 --[[
     Returns true if the given spell/ability can be used, and is not on cooldown.
 --]]
-function as.ready_to_use(spell)
-    if (spell ~= nil) and as.can_use(spell) then
-        local player = windower.ffxi.get_player()
+function as.ready_to_use(action, player)
+    if (action ~= nil) and as.can_use(action) then
+        player = player or windower.ffxi.get_player()
         if (player == nil) then return false end
-        if S{'/magic','/ninjutsu','/song'}:contains(spell.prefix) then
-            local rc = windower.ffxi.get_spell_recasts()[spell.recast_id]
+        if S{'/magic','/ninjutsu','/song'}:contains(action.prefix) then
+            local rc = windower.ffxi.get_spell_recasts()[action.recast_id]
             return rc == 0
-        elseif S{'/jobability','/pet'}:contains(spell.prefix) then
-            local rc = windower.ffxi.get_ability_recasts()[spell.recast_id]
+        elseif S{'/jobability','/pet'}:contains(action.prefix) then
+            local rc = windower.ffxi.get_ability_recasts()[action.recast_id]
             return rc == 0
-        elseif (spell.prefix == '/weaponskill') then
+        elseif (action.prefix == '/weaponskill') then
             return (player.status == 1) and (player.vitals.tp > 999)
         end
     end

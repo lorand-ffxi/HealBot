@@ -145,22 +145,22 @@ function processCommand(command,...)
             utils.register_ws(args)
         end
     elseif S{'spam','nuke'}:contains(command) then
-        local cmd = args[1] and args[1]:lower() or (settings.nuke.active and 'off' or 'on')
+        local cmd = args[1] and args[1]:lower() or (settings.spam.active and 'off' or 'on')
         if S{'on','true'}:contains(cmd) then
-            settings.nuke.active = true
-            if (settings.nuke.name ~= nil) then
-                atc('Spell spamming is now on. Spell: '..settings.nuke.name)
+            settings.spam.active = true
+            if (settings.spam.name ~= nil) then
+                atc('Action spamming is now on. Action: '..settings.spam.name)
             else
-                atc('Spell spamming is now on. To set a spell to use: //hb spam use <spell>')
+                atc('Action spamming is now on. To set a spell to use: //hb spam use <action>')
             end
         elseif S{'off','false'}:contains(cmd) then
-            settings.nuke.active = false
-            atc('Spell spamming is now off.')
+            settings.spam.active = false
+            atc('Action spamming is now off.')
         else
             if S{'use','set'}:contains(cmd) then
                 table.remove(args, 1)
             end
-            utils.register_spam_spell(args)
+            utils.register_spam_action(args)
         end
     elseif S{'debuff', 'db'}:contains(command) then
         local cmd = args[1] and args[1]:lower() or (offense.debuffing_active and 'off' or 'on')
@@ -328,7 +328,7 @@ utils.get_player_id = _libs.lor.advutils.scached(_get_player_id)
 function utils.register_offensive_debuff(args, cancel)
     local argstr = table.concat(args,' ')
     local spell_name = utils.formatActionName(argstr)
-    local spell = getActionFor(spell_name)
+    local spell = utils.getActionFor(spell_name)
     if (spell ~= nil) then
         if Assert.can_use(spell) then
             offense.maintain_debuff(spell, cancel)
@@ -341,19 +341,19 @@ function utils.register_offensive_debuff(args, cancel)
 end
 
 
-function utils.register_spam_spell(args)
+function utils.register_spam_action(args)
     local argstr = table.concat(args,' ')
-    local spell_name = utils.formatActionName(argstr)
-    local spell = getActionFor(spell_name)
-    if (spell ~= nil) then
-        if Assert.can_use(spell) then
-            settings.nuke.name = spell.en
-            atcfs('Will now spam %s', settings.nuke.name)
+    local action_name = utils.formatActionName(argstr)
+    local action = utils.getActionFor(action_name)
+    if (action ~= nil) then
+        if Assert.can_use(action) then
+            settings.spam.name = action.en
+            atcfs('Will now spam %s', settings.spam.name)
         else
-            atcfs(123,'Error: Unable to cast %s', spell.en)
+            atcfs(123,'Error: Unable to cast %s', action.en)
         end
     else
-        atcfs(123,'Error: Invalid spell name: %s', spell_name)
+        atcfs(123,'Error: Invalid action name: %s', action_name)
     end
 end
 
@@ -471,9 +471,9 @@ function disableCommand(cmd, disable)
     elseif S{'debuff','debuffs','debuffing'}:contains(cmd) then
         settings.disable.debuff = disable
         atc('Debuffing'..msg)
-    elseif S{'nuke','nukes','nuking'}:contains(cmd) then
-        settings.disable.nuke = disable
-        atc('Nuking'..msg)
+    elseif S{'spam','nuke','nukes','nuking'}:contains(cmd) then
+        settings.disable.spam = disable
+        atc('Spamming'..msg)
     elseif S{'ws','weaponskill','weaponskills','weaponskilling'}:contains(cmd) then
         settings.disable.ws = disable
         atc('Weaponskilling'..msg)
@@ -589,8 +589,10 @@ end
 function utils.getActionFor(actionName)
     local lower_name = actionName:lower()
     for _,artype in pairs(action_resource_types) do
-        if lc_res[artype][lower_name] ~= nil then
-            return lc_res[artype][lower_name]
+        local action = lc_res[artype][lower_name]
+        if action ~= nil then
+            atcd('%s %s %s[%s]: %s':format(actionName,rarr,artype,action.id,action.en))
+            return action
         end
     end
     return nil
@@ -677,7 +679,7 @@ function load_configs()
             actionInfo={x=0,y=0,visible=true},
             montoredBox={x=-150,y=600,font='Arial',size=10,visible=true}
         },
-        nuke = {name='Stone'},
+        spam = {name='Stone'},
         healing = {min={cure=3,curaga=1,waltz=2,waltzga=1},curaga_min_targets=2},
         disable = {curaga=false},
         ignoreTrusts=true
@@ -747,7 +749,7 @@ function update_settings(loaded)
         disable = {},
         follow = {delay = 0.08, distance = 3},
         healing = {minCure = 3, minCuraga = 1, minWaltz = 2, minWaltzga = 1},
-        nuke = {}
+        spam = {}
     })
 end
 

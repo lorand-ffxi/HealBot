@@ -138,10 +138,11 @@ local function get_lc_resources()
     local targets = {'spells','job_abilities','weapon_skills'}
     local lc_resources = {}
     for _,target in pairs(targets) do
+        lc_resources[target] = {}
         for id,action in pairs(res[target]) do
             local action_name = action.en:lower()
-            lc_resources[action_name] = action
-            lc_resources[action_name].ja = nil
+            lc_resources[target][action_name] = action
+            lc_resources[target][action_name].ja = nil
         end
     end
     return lc_resources

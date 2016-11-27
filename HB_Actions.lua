@@ -140,7 +140,7 @@ function actions.get_offensive_action()
     if target == nil then return nil end
     local action = {}
     
-    --Prioritize debuffs over nukes/ws for now
+    --Prioritize debuffs over nukes/ws
     local dbuffq = offense.getDebuffQueue(player, target)
     while not dbuffq:empty() do
         local dbact = dbuffq:pop()
@@ -155,7 +155,7 @@ function actions.get_offensive_action()
         return action.db
     end
     
-    if (not settings.disable.ws) and (settings.ws ~= nil) and Assert.ready_to_use(getActionFor(settings.ws.name)) then
+    if (not settings.disable.ws) and (settings.ws ~= nil) and Assert.ready_to_use(utils.getActionFor(settings.ws.name)) then
         local sign = settings.ws.sign or '>'
         local hp = settings.ws.hp or 0
         local hp_ok = ((sign == '<') and (target.hpp <= hp)) or ((sign == '>') and (target.hpp >= hp))
@@ -174,14 +174,24 @@ function actions.get_offensive_action()
         end
         
         if (hp_ok and partner_ok) then
-            return {action=getActionFor(settings.ws.name),name='<t>'}
+            return {action=utils.getActionFor(settings.ws.name),name='<t>'}
         end
-    elseif (not settings.disable.nuke) and settings.nuke.active and (settings.nuke.name ~= nil) then
-        local spell = getActionFor(settings.nuke.name)
-        if (player.vitals.mp >= spell.mp_cost) and (target.hpp > 0) and Assert.ready_to_use(spell) and Assert.in_casting_range('<t>') then
-            return {action=spell,name='<t>'}
+    elseif (not settings.disable.spam) and settings.spam.active and (settings.spam.name ~= nil) then
+        local spam_action = utils.getActionFor(settings.spam.name)
+        if (target.hpp > 0) and Assert.ready_to_use(spam_action) and Assert.in_casting_range('<t>') then
+            local _p_ok = (player.vitals.mp >= spam_action.mp_cost)
+            if spam_action.tp_cost ~= nil then
+                _p_ok = (_p_ok and (player.vitals.tp >= spam_action.tp_cost))
+            end
+            if _p_ok then
+                return {action=spam_action,name='<t>'}
+            else
+                atcd('MP/TP not ok for '..settings.spam.name)
+            end
         end
     end
+    
+    atcd('get_offensive_action: no offensive actions to perform')
 	return nil
 end
 
