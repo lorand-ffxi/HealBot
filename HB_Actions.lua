@@ -82,47 +82,47 @@ function actions.get_defensive_action()
 end
 
 
+local function perform_action(action)
+    if action == nil then return end
+    local act = action.action
+    local target_name = action.name
+    local msg = action.msg or ''
+    atcd(act.en..sparr..target_name..msg)   --Debug message
+    wcmd(act.prefix, act.en, '<t>')         --Send cmd to windower
+end
+
+
 function actions.take_action(player, partner, targ)
     buffs.checkOwnBuffs()
     local_queue_reset()
     local action = actions.get_defensive_action()
     if (action ~= nil) then         --If there's a defensive action to perform
-        local act = action.action
-        local target_name = action.name
-        local msg = action.msg or ''
-        
         --Record attempt time for buffs/debuffs
-        buffs.buffList[target_name] = buffs.buffList[target_name] or {}
-        if (action.type == 'buff') and (buffs.buffList[target_name][action.buff]) then
-            buffs.buffList[target_name][action.buff].attempted = os.clock()
+        buffs.buffList[action.name] = buffs.buffList[action.name] or {}
+        if (action.type == 'buff') and (buffs.buffList[action.name][action.buff]) then
+            buffs.buffList[action.name][action.buff].attempted = os.clock()
         elseif (action.type == 'debuff') then
-            buffs.debuffList[target_name][action.debuff.id].attempted = os.clock()
+            buffs.debuffList[action.name][action.debuff.id].attempted = os.clock()
         end
-        
-        atcd(act.en..sparr..target_name..msg)         --Debug message
-        wcmd(act.prefix, act.en, target_name)         --Send command to windower
+        perform_action(action)
     else                        --Otherwise, there may be an offensive action
-        if (targ ~= nil) then
-            local partner_engaged = (partner.status == 1)
+        if (targ ~= nil) or modes.independent then
             local self_engaged = (player.status == 1)
-            if (player.target_index == partner.target_index) then
-                if offense.assist.engage and partner_engaged and (not self_engaged) then
-                    healer.actor:send_cmd('input /attack on')
-                else
-                    local action = actions.get_offensive_action()
-                    if (action ~= nil) then
-                        local act = action.action
-                        local target_name = action.name
-                        local msg = action.msg or ''
-                        
-                        atcd(act.en..sparr..target_name..msg) --Debug message
-                        wcmd(act.prefix, act.en, '<t>') --Send cmd to windower
+            if (targ ~= nil) then
+                local partner_engaged = (partner.status == 1)
+                if (player.target_index == partner.target_index) then
+                    if offense.assist.engage and partner_engaged and (not self_engaged) then
+                        healer.actor:send_cmd('input /attack on')
+                    else
+                        perform_action(actions.get_offensive_action(player))
+                    end
+                else                            --Different targets
+                    if partner_engaged and (not self_engaged) then
+                        healer.actor:send_cmd('input /as '..offense.assist.name)
                     end
                 end
-            else                            --Different targets
-                if partner_engaged and (not self_engaged) then
-                    healer.actor:send_cmd('input /as '..offense.assist.name)
-                end
+            elseif self_engaged then
+                perform_action(actions.get_offensive_action(player))
             end
             offense.cleanup()
         end
@@ -134,8 +134,8 @@ end
 	Builds an action queue for offensive actions.
     Returns the action deemed most important at the time.
 --]]
-function actions.get_offensive_action()
-	local player = windower.ffxi.get_player()
+function actions.get_offensive_action(player)
+	player = player or windower.ffxi.get_player()
 	local target = windower.ffxi.get_mob_by_target()
     if target == nil then return nil end
     local action = {}

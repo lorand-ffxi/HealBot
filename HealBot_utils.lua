@@ -283,6 +283,8 @@ function processCommand(command,...)
         toggleMode('showPacketInfo', args[1], 'Packet info display', 'PacketInfo')
     elseif command == 'debug' then
         toggleMode('debug', args[1], 'Debug mode', 'debug mode')
+    elseif command == 'independent' then
+        toggleMode('independent', args[1], 'Independent mode', 'independent mode')    
     elseif txtbox_cmd_map[command] ~= nil then
         local boxName = txtbox_cmd_map[command]
         if utils.posCommand(boxName, args) then

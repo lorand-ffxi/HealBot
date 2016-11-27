@@ -54,6 +54,7 @@ local _events = {}
 local ipc_req = serialua.encode({method='GET', pk='buff_ids'})
 local can_act_statuses = S{0,1,5,85}    --0/1/5/85 = idle/engaged/chocobo/other_mount
 local dead_statuses = S{2,3}
+local instant_prefixes = S{'/jobability','/weaponskill'}
 local pt_keys = {'party1_count','party2_count','party3_count'}
 local pm_keys = {
     {'p0','p1','p2','p3','p4','p5'},
@@ -86,7 +87,7 @@ _events['load'] = windower.register_event('load', function()
     healer.id = player.id
     healer.actor = _libs.lor.actor.Actor.new(healer.id)
     
-    modes = {['showPacketInfo']=false,['debug']=false,['mob_debug']=false}
+    modes = {['showPacketInfo']=false,['debug']=false,['mob_debug']=false,['independent']=false}
     _libs.lor.debug = modes.debug
     active = false
     partyMemberInfo = {}
@@ -195,9 +196,17 @@ end)
 
 function wcmd(prefix, action, target)
     healer.actor:send_cmd('input %s "%s" "%s"':format(prefix, action, target))
-    if action:lower():contains('waltz') then
-        healer.actor.action_delay = 2.75
+    
+    local action_res = utils.getActionFor(action)
+    if action_res ~= nil then
+        if instant_prefixes:contains(action_res.prefix) then
+            healer.actor.action_delay = 2.75
+        end
     end
+    
+    --if action:lower():contains('waltz') then
+        --healer.actor.action_delay = 2.75
+    --end
 end
 
 
