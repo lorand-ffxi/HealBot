@@ -195,7 +195,7 @@ end)
 
 
 function wcmd(prefix, action, target)
-    healer.actor:send_cmd('input %s "%s" "%s"':format(prefix, action, target))
+    healer.actor:send_cmd(('input %s "%s" "%s"'):format(prefix, action, target))
     
     local action_res = utils.getActionFor(action)
     if action_res ~= nil then
@@ -294,7 +294,7 @@ function hb.isMoving()
         return true
     end
     local moving = healer.actor:is_moving()
-    txts.moveInfo:text('Time @ %s: %.1fs':format(healer.actor:pos():toString(), timeAtPos))
+    txts.moveInfo:text(('Time @ %s: %.1fs'):format(healer.actor:pos():toString(), timeAtPos))
     txts.moveInfo:visible(settings.textBoxes.moveInfo.visible)
     return moving
 end
@@ -302,7 +302,7 @@ end
 
 function hb.isPerformingAction(moving)
     local acting = healer.actor:is_acting()
-    local status = 'is %s':format(acting and 'performing an action' or (moving and 'moving' or 'idle'))
+    local status = ('is %s'):format(acting and 'performing an action' or (moving and 'moving' or 'idle'))
     
     if (os.clock() - healer.zone_enter) < 25 then
         acting = true
@@ -325,7 +325,7 @@ function hb.isPerformingAction(moving)
     end
     
     local hb_status = active and '\\cs(0,0,255)[ON]\\cr' or '\\cs(255,0,0)[OFF]\\cr'
-    txts.actionInfo:text(' %s %s %s':format(hb_status, healer.name, status))
+    txts.actionInfo:text((' %s %s %s'):format(hb_status, healer.name, status))
     txts.actionInfo:visible(settings.textBoxes.actionInfo.visible)
     return acting
 end

@@ -322,22 +322,22 @@ function buffs.register_debuff(target, debuff, gain, action)
             local pmInfo = partyMemberInfo[tname]
             if (ignoreList ~= nil) and (pmInfo ~= nil) then
                 if ignoreList:contains(pmInfo.job) and ignoreList:contains(pmInfo.subjob) then
-                    atcd('Ignoring %s on %s because of their job':format(debuff.en, tname))
+                    atcd(('Ignoring %s on %s because of their job'):format(debuff.en, tname))
                     return
                 end
             end
         end
         debuff_tbl[debuff.id] = {landed = os.clock()}
         if is_enemy and modes.mob_debug then
-            atc('Detected %sdebuff: %s %s %s [%s]':format(msg, debuff.en, rarr, tname, tid))
+            atc(('Detected %sdebuff: %s %s %s [%s]'):format(msg, debuff.en, rarr, tname, tid))
         end
-        atcd('Detected %sdebuff: %s %s %s [%s]':format(msg, debuff.en, rarr, tname, tid))
+        atcd(('Detected %sdebuff: %s %s %s [%s]'):format(msg, debuff.en, rarr, tname, tid))
     else
         debuff_tbl[debuff.id] = nil
         if is_enemy and modes.mob_debug then
-            atc('Detected %sdebuff: %s wore off %s [%s]':format(msg, debuff.en, tname, tid))
+            atc(('Detected %sdebuff: %s wore off %s [%s]'):format(msg, debuff.en, tname, tid))
         end
-        atcd('Detected %sdebuff: %s wore off %s [%s]':format(msg, debuff.en, tname, tid))
+        atcd(('Detected %sdebuff: %s wore off %s [%s]'):format(msg, debuff.en, tname, tid))
     end
 end
 
@@ -411,15 +411,15 @@ function buffs.register_buff(target, buff, gain, action)
         if gain then
             buff_tbl[bkey].landed = os.clock()
             if is_enemy and modes.mob_debug then
-                atc('Detected %sbuff: %s %s %s [%s]':format(msg, nbuff.en, rarr, tname, tid))
+                atc(('Detected %sbuff: %s %s %s [%s]'):format(msg, nbuff.en, rarr, tname, tid))
             end
-            atcd('Detected %sbuff: %s %s %s [%s]':format(msg, nbuff.en, rarr, tname, tid))
+            atcd(('Detected %sbuff: %s %s %s [%s]'):format(msg, nbuff.en, rarr, tname, tid))
         else
             buff_tbl[bkey].landed = nil
             if is_enemy and modes.mob_debug then
-                atc('Detected %sbuff: %s wore off %s [%s]':format(msg, nbuff.en, tname, tid))
+                atc(('Detected %sbuff: %s wore off %s [%s]'):format(msg, nbuff.en, tname, tid))
             end
-            atcd('Detected %sbuff: %s wore off %s [%s]':format(msg, nbuff.en, tname, tid))
+            atcd(('Detected %sbuff: %s wore off %s [%s]'):format(msg, nbuff.en, tname, tid))
         end
     end 
 end

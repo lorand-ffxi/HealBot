@@ -63,7 +63,7 @@ function processMessage(ai, monitored_ids)
             if modes.showPacketInfo then
                 local actor = windower.ffxi.get_mob_by_id(ai.actor_id)
                 local msg = res.action_messages[ai.message_id] or {en='???'}
-                local params = ', ':join(tostring(ai.param_1), tostring(ai.param_2), tostring(ai.param_3))
+                local params = (', '):join(tostring(ai.param_1), tostring(ai.param_2), tostring(ai.param_3))
                 atcfs('[0x29]Message(%s): %s { %s } %s %s | %s', ai.message_id, actor.name, params, rarr, target.name, msg.en)
             end
             

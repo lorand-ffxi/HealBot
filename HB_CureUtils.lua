@@ -183,7 +183,7 @@ function cu.get_cure_queue()
             if tier >= settings.healing.min[settings.healing.mode] then
                 local spell = cu.get_usable_cure(tier, settings.healing.mode)
                 if spell ~= nil then
-                    cq:enqueue('cure', spell, name, p.hpp, ' (%s)':format(p.missing))
+                    cq:enqueue('cure', spell, name, p.hpp, (' (%s)'):format(p.missing))
                 end
             end
         end
@@ -191,7 +191,7 @@ function cu.get_cure_queue()
     if (not settings.disable.curaga) and (settings.healing.max[settings.healing.modega] > 0) then
         local spell, p = cu.pick_best_curaga_possibility()
         if spell ~= nil then
-            cq:enqueue('cure', spell, p.name, p.hpp, ' (%s)':format(p.missing))
+            cq:enqueue('cure', spell, p.name, p.hpp, (' (%s)'):format(p.missing))
         end
     end
     return cq:getQueue()

@@ -74,7 +74,7 @@ function processCommand(command,...)
     local args = map(windower.convert_auto_trans, {...})
     
     if S{'reload','unload'}:contains(command) then
-        windower.send_command('lua %s %s':format(command, _addon.name))
+        windower.send_command(('lua %s %s'):format(command, _addon.name))
     elseif command == 'refresh' then
         load_configs()
     elseif S{'start','on'}:contains(command) then
@@ -227,11 +227,11 @@ function processCommand(command,...)
         local rtmsg = resetTarget or 'all monitored players'
         if b then
             buffs.resetBuffTimers(resetTarget)
-            atc('Buff timers for %s were reset.':format(rtmsg))
+            atc(('Buff timers for %s were reset.'):format(rtmsg))
         end
         if d then
             buffs.resetDebuffTimers(resetTarget)
-            atc('Debuffs detected for %s were reset.':format(rtmsg))
+            atc(('Debuffs detected for %s were reset.'):format(rtmsg))
         end
     elseif command == 'buff' then
         buffs.registerNewBuff(args, true)
@@ -376,7 +376,7 @@ end
 function utils.apply_bufflist(args)
     local mj = windower.ffxi.get_player().main_job
     local sj = windower.ffxi.get_player().sub_job
-    local job = '%s/%s':format(mj, sj) 
+    local job = ('%s/%s'):format(mj, sj)
     local bl_name = args[1]
     local bl_target = args[2]
     if bl_target == nil and bl_name == 'self' then
@@ -593,7 +593,7 @@ function utils.getActionFor(actionName)
     for _,artype in pairs(action_resource_types) do
         local action = lc_res[artype][lower_name]
         if action ~= nil then
-            atcd('%s %s %s[%s]: %s':format(actionName,rarr,artype,action.id,action.en))
+            atcd(('%s %s %s[%s]: %s'):format(actionName,rarr,artype,action.id,action.en))
             return action
         end
     end
@@ -843,14 +843,14 @@ function help_text()
         {'help','Displays this help text'}
     }
     local acmds = {
-        ['fcmd']='f':colorize(ac,cc)..'ollow [<player> | dist <distance> | off | resume]',
-        ['ascmd']='as':colorize(ac,cc)..'sist [<player> | attack | off | resume]',
-        ['wscmd1']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill use <ws name>',
-        ['wscmd2']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill hp <sign> <mob hp%>',
-        ['wscmd3']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill waitfor <player> <tp>',
-        ['wscmd4']='w':colorize(ac,cc)..'eapon'..'s':colorize(ac,cc)..'kill nopartner',
-        ['dbcmd']='d':colorize(ac,cc)..'e'..'b':colorize(ac,cc)..'uff [(use | rm) <spell> | on | off | ls]',
-        ['blcmd']='b':colorize(ac,cc)..'uff'..'l':colorize(ac,cc)..'ist <list name> (<player>)',
+        ['fcmd']=('f'):colorize(ac,cc)..'ollow [<player> | dist <distance> | off | resume]',
+        ['ascmd']=('as'):colorize(ac,cc)..'sist [<player> | attack | off | resume]',
+        ['wscmd1']=('w'):colorize(ac,cc)..'eapon'..('s'):colorize(ac,cc)..'kill use <ws name>',
+        ['wscmd2']=('w'):colorize(ac,cc)..'eapon'..('s'):colorize(ac,cc)..'kill hp <sign> <mob hp%>',
+        ['wscmd3']=('w'):colorize(ac,cc)..'eapon'..('s'):colorize(ac,cc)..'kill waitfor <player> <tp>',
+        ['wscmd4']=('w'):colorize(ac,cc)..'eapon'..('s'):colorize(ac,cc)..'kill nopartner',
+        ['dbcmd']=('d'):colorize(ac,cc)..'e'..('b'):colorize(ac,cc)..'uff [(use | rm) <spell> | on | off | ls]',
+        ['blcmd']=('b'):colorize(ac,cc)..'uff'..('l'):colorize(ac,cc)..'ist <list name> (<player>)',
     }
     
     for _,tbl in pairs(cmds) do

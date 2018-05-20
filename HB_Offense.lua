@@ -97,12 +97,12 @@ function offense.registerMob(mob, forget)
 
     if forget then
         offense.mobs[mob.id] = nil
-        atcd('Forgetting mob: %s [%s]':format(mob.name, mob.id))
+        atcd(('Forgetting mob: %s [%s]'):format(mob.name, mob.id))
     else
         if offense.mobs[mob.id] ~= nil then
-            atcd('Attempted to register already known mob: %s[%s]':format(mob.name, mob.id))
+            atcd(('Attempted to register already known mob: %s[%s]'):format(mob.name, mob.id))
         else
-            atcd('Registering new mob: %s[%s]':format(mob.name, mob.id))
+            atcd(('Registering new mob: %s[%s]'):format(mob.name, mob.id))
         end
         offense.mobs[mob.id] = offense.mobs[mob.id] or {}
     end
@@ -116,7 +116,7 @@ function offense.getDebuffQueue(player, target)
         for id,debuff in pairs(offense.debuffs) do
             if offense.mobs[target.id][id] == nil then
                 if not (offense.immunities[target.name] and offense.immunities[target.name][id]) then
-                    dbq:enqueue('debuff_mob', debuff.spell, target.name, debuff.res, ' (%s)':format(debuff.spell.en))
+                    dbq:enqueue('debuff_mob', debuff.spell, target.name, debuff.res, (' (%s)'):format(debuff.spell.en))
                 end
             end
         end
