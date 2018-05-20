@@ -11,6 +11,7 @@ local buffs = {
     ignored_debuffs = {},
     action_buff_map = lor_settings.load('data/action_buff_map.lua')
 }
+local ffxi = _libs.lor.ffxi
 
 --==============================================================================
 --          Local Player Buff Checking
@@ -18,7 +19,7 @@ local buffs = {
 
 function buffs.checkOwnBuffs()
     local player = windower.ffxi.get_player()
-    if (player ~= nil) then
+    if player ~= nil then
         buffs.review_active_buffs(player, player.buffs)
     end
 end
@@ -68,6 +69,7 @@ end
 --          Monitored Player Buff Checking
 --==============================================================================
 
+
 function buffs.getBuffQueue()
     local player = windower.ffxi.get_player()
     local activeBuffIds = S(player.buffs)
@@ -90,6 +92,7 @@ function buffs.getBuffQueue()
     return bq:getQueue()
 end
 
+
 function buffs.getDebuffQueue()
     local dbq = ActionQueue.new()
     local now = os.clock()
@@ -100,7 +103,7 @@ function buffs.getDebuffQueue()
             if (removalSpellName ~= nil) then
                 if (info.attempted == nil) or ((now - info.attempted) >= 3) then
                     local spell = res.spells:with('en', removalSpellName)
-                    if Assert.can_use(spell) and Assert.target_is_valid(spell, targ) then
+                    if healer:can_use(spell) and ffxi.target_is_valid(spell, targ) then
                         local ign = buffs.ignored_debuffs[debuff.en]
                         if not ((ign ~= nil) and ((ign.all == true) or ((ign[targ] ~= nil) and (ign[targ] == true)))) then
                             dbq:enqueue('debuff', spell, targ, debuff, ' ('..debuff.en..')')
@@ -119,6 +122,7 @@ end
 --          Input Handling Functions
 --==============================================================================
 
+
 function buffs.registerNewBuff(args, use)
     local targetName = args[1] and args[1] or ''
     table.remove(args, 1)
@@ -131,6 +135,7 @@ function buffs.registerNewBuff(args, use)
     end
 end
 
+
 function buffs.registerNewBuffName(targetName, bname, use)
     local spellName = utils.formatActionName(bname)
     if (spellName == nil) then
@@ -139,8 +144,8 @@ function buffs.registerNewBuffName(targetName, bname, use)
     end
     
     local me = windower.ffxi.get_player()
-    local target = utils.getTarget(targetName)
-    if (target == nil) then
+    local target = ffxi.get_target(targetName)
+    if target == nil then
         atc('Unable to find buff target: '..targetName)
         return
     end
@@ -149,7 +154,7 @@ function buffs.registerNewBuffName(targetName, bname, use)
         atc('Unable to cast or invalid: '..spellName)
         return
     end
-    if not Assert.target_is_valid(action, target) then
+    if not ffxi.target_is_valid(action, target) then
         atc(target.name..' is an invalid target for '..action.en)
         return
     end
@@ -181,6 +186,7 @@ function buffs.registerNewBuffName(targetName, bname, use)
         atc('Will no longer maintain buff: '..action.en..' '..rarr..' '..target.name)
     end
 end
+
 
 function buffs.registerIgnoreDebuff(args, ignore)
     local targetName = args[1] and args[1] or ''
@@ -214,15 +220,16 @@ function buffs.registerIgnoreDebuff(args, ignore)
     end
 end
 
+
 function buffs.getAction(actionName, target)
     local me = windower.ffxi.get_player()
     local action = nil
     local spell = res.spells:with('en', actionName)
-    if (spell ~= nil) and Assert.can_use(spell) then
+    if (spell ~= nil) and healer:can_use(spell) then
         action = spell
     elseif (target ~= nil) and (target.id == me.id) then
         local abil = res.job_abilities:with('en', actionName)
-        if (abil ~= nil) and Assert.can_use(abil) then
+        if (abil ~= nil) and healer:can_use(abil) then
             action = abil
         end
     end
@@ -319,7 +326,7 @@ function buffs.register_debuff(target, debuff, gain, action)
             if offense.ignored[debuff.enn] ~= nil then return end
         else
             local ignoreList = ignoreDebuffs[debuff.en]
-            local pmInfo = partyMemberInfo[tname]
+            local pmInfo = hb.partyMemberInfo[tname]
             if (ignoreList ~= nil) and (pmInfo ~= nil) then
                 if ignoreList:contains(pmInfo.job) and ignoreList:contains(pmInfo.subjob) then
                     atcd(('Ignoring %s on %s because of their job'):format(debuff.en, tname))
@@ -328,13 +335,13 @@ function buffs.register_debuff(target, debuff, gain, action)
             end
         end
         debuff_tbl[debuff.id] = {landed = os.clock()}
-        if is_enemy and modes.mob_debug then
+        if is_enemy and hb.modes.mob_debug then
             atc(('Detected %sdebuff: %s %s %s [%s]'):format(msg, debuff.en, rarr, tname, tid))
         end
         atcd(('Detected %sdebuff: %s %s %s [%s]'):format(msg, debuff.en, rarr, tname, tid))
     else
         debuff_tbl[debuff.id] = nil
-        if is_enemy and modes.mob_debug then
+        if is_enemy and hb.modes.mob_debug then
             atc(('Detected %sdebuff: %s wore off %s [%s]'):format(msg, debuff.en, tname, tid))
         end
         atcd(('Detected %sdebuff: %s wore off %s [%s]'):format(msg, debuff.en, tname, tid))
@@ -410,13 +417,13 @@ function buffs.register_buff(target, buff, gain, action)
         buff_tbl[bkey] = buff_tbl[bkey] or {}
         if gain then
             buff_tbl[bkey].landed = os.clock()
-            if is_enemy and modes.mob_debug then
+            if is_enemy and hb.modes.mob_debug then
                 atc(('Detected %sbuff: %s %s %s [%s]'):format(msg, nbuff.en, rarr, tname, tid))
             end
             atcd(('Detected %sbuff: %s %s %s [%s]'):format(msg, nbuff.en, rarr, tname, tid))
         else
             buff_tbl[bkey].landed = nil
-            if is_enemy and modes.mob_debug then
+            if is_enemy and hb.modes.mob_debug then
                 atc(('Detected %sbuff: %s wore off %s [%s]'):format(msg, nbuff.en, tname, tid))
             end
             atcd(('Detected %sbuff: %s wore off %s [%s]'):format(msg, nbuff.en, tname, tid))

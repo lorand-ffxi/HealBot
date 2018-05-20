@@ -5,7 +5,9 @@
 --]]
 --==============================================================================
 
-local cu = {cure_types={'cure','waltz','curaga','waltzga'}}
+local cu = {cure_types={'cure','waltz','curaga','waltzga'} }
+local Pos = _libs.lor.position
+local ffxi = _libs.lor.ffxi
 
 --==============================================================================
 --                  Static Cure Information
@@ -38,7 +40,7 @@ cu.waltzga = {
 }
 
 function cu.init_cure_potencies()
-    local potency_table = hb_config.cure_potency[healer.name] and hb_config.cure_potency[healer.name][healer.job] or hb_config.cure_potency.default
+    local potency_table = hb.config.cure_potency[healer.name] and hb.config.cure_potency[healer.name][healer.main_job] or hb.config.cure_potency.default
     for spell_group,_ in pairs(potency_table) do
         for spell_tier,_ in pairs(cu[spell_group]) do
             cu[spell_group][spell_tier].hp = potency_table[spell_group][spell_tier]
@@ -79,7 +81,7 @@ end
 
 
 function cu.injured_pt_members()
-    local party_members = utils.getMainPartyList()
+    local party_members = ffxi.party_member_names()
     local injured = {}
     for _,trg in pairs(hb.getMonitoredPlayers()) do
         if trg.hpp < 95 and party_members:contains(trg.name) then
@@ -92,7 +94,7 @@ function cu.injured_pt_members()
             end
             injured[trg.name] = {
                 name = trg.name, hp = _hp, missing = _missing, hpp = trg.hpp,
-                pos = getPosition(trg.name),
+                pos = Pos.of(trg.name),
                 danger = cu.getDangerLevel(trg.hpp)
             }
         end
@@ -203,19 +205,19 @@ end
 function cu.get_multiplier(cure_type)
     local mult = 1
     if cure_type:startswith('waltz') then
-        if Assert.buff_active('Trance') then
+        if healer:buff_active('Trance') then
             mult = 0
         end
     else --it starts with 'cur'
         local p = windower.ffxi.get_player()
-        if (p.job == 'BLM') and Assert.buff_active('Manafont') then
+        if (p.main_job == 'BLM') and healer:buff_active('Manafont') then
             mult = 0
-        elseif Assert.buff_active('Manawell') then
+        elseif healer:buff_active('Manawell') then
             mult = 0
-        elseif S{p.job, p.sub_job}:contains('SCH') then
-            if Assert.buff_active('Light Arts','Addendum: White') then
-                mult = Assert.buff_active('Penury') and 0.5 or 0.9
-            elseif Assert.buff_active('Dark Arts','Addendum: Black') then
+        elseif S{p.main_job, p.sub_job}:contains('SCH') then
+            if healer:buff_active('Light Arts','Addendum: White') then
+                mult = healer:buff_active('Penury') and 0.5 or 0.9
+            elseif healer:buff_active('Dark Arts','Addendum: Black') then
                 mult = 1.1
             end
         end
@@ -280,7 +282,7 @@ end
 function cu.highest_tier(cure_type)
     local highest = 0
     for tier,spell in pairs(cu[cure_type]) do
-        if Assert.can_use(spell.res) then
+        if healer:can_use(spell.res) then
             highest = (tier > highest) and tier or highest
         end
     end

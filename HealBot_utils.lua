@@ -7,8 +7,10 @@
 --          Input Handling Functions
 --==============================================================================
 
-utils = {normalize={}}
-local action_resource_types = {'spells','job_abilities','weapon_skills'}
+utils = {normalize={} }
+local lor_res = _libs.lor.resources
+local lc_res = lor_res.lc_res
+local ffxi = _libs.lor.ffxi
 
 
 function utils.normalize_str(str)
@@ -76,11 +78,11 @@ function processCommand(command,...)
     if S{'reload','unload'}:contains(command) then
         windower.send_command(('lua %s %s'):format(command, _addon.name))
     elseif command == 'refresh' then
-        load_configs()
+        utils.load_configs()
     elseif S{'start','on'}:contains(command) then
         hb.activate()
     elseif S{'stop','end','off'}:contains(command) then
-        active = false
+        hb.active = false
         printStatus()
     elseif S{'disable'}:contains(command) then
         if not validate(args, 1, 'Error: No argument specified for Disable') then return end
@@ -241,7 +243,7 @@ function processCommand(command,...)
         if not validate(args, 1, 'Error: No argument specified for BuffList') then return end
         utils.apply_bufflist(args)
     elseif command == 'bufflists' then
-        pprint(hb_config.buff_lists)
+        pprint(hb.config.buff_lists)
     elseif command == 'ignore_debuff' then
         buffs.registerIgnoreDebuff(args, true)
     elseif command == 'unignore_debuff' then
@@ -330,9 +332,9 @@ utils.get_player_id = _libs.lor.advutils.scached(_get_player_id)
 function utils.register_offensive_debuff(args, cancel)
     local argstr = table.concat(args,' ')
     local spell_name = utils.formatActionName(argstr)
-    local spell = utils.getActionFor(spell_name)
+    local spell = lor_res.action_for(spell_name)
     if (spell ~= nil) then
-        if Assert.can_use(spell) then
+        if healer:can_use(spell) then
             offense.maintain_debuff(spell, cancel)
         else
             atcfs(123,'Error: Unable to cast %s', spell.en)
@@ -346,9 +348,9 @@ end
 function utils.register_spam_action(args)
     local argstr = table.concat(args,' ')
     local action_name = utils.formatActionName(argstr)
-    local action = utils.getActionFor(action_name)
+    local action = lor_res.action_for(action_name)
     if (action ~= nil) then
-        if Assert.can_use(action) then
+        if healer:can_use(action) then
             settings.spam.name = action.en
             atcfs('Will now spam %s', settings.spam.name)
         else
@@ -363,7 +365,7 @@ end
 function utils.register_ws(args)
     local argstr = table.concat(args,' ')
     local wsname = utils.formatActionName(argstr)
-    local ws = utils.getActionFor(wsname)
+    local ws = lor_res.action_for(wsname)
     if (ws ~= nil) then
         settings.ws.name = ws.en
         atcfs('Will now use %s', ws.en)
@@ -382,9 +384,9 @@ function utils.apply_bufflist(args)
     if bl_target == nil and bl_name == 'self' then
         bl_target = 'me'
     end
-    local buff_list = table.get_nested_value(hb_config.buff_lists, {job, job:lower(), mj, mj:lower()}, bl_name)
+    local buff_list = table.get_nested_value(hb.config.buff_lists, {job, job:lower(), mj, mj:lower()}, bl_name)
     
-    buff_list = buff_list or hb_config.buff_lists[bl_name]
+    buff_list = buff_list or hb.config.buff_lists[bl_name]
     if buff_list ~= nil then
         for _,buff in pairs(buff_list) do
             buffs.registerNewBuff({bl_target, buff}, true)
@@ -445,8 +447,8 @@ function utils.toggleX(tbl, field, cmd, msg, msgErr)
 end
 
 function toggleMode(mode, cmd, msg, msgErr)
-    utils.toggleX(modes, mode, cmd, msg, msgErr)
-    _libs.lor.debug = modes.debug
+    utils.toggleX(hb.modes, mode, cmd, msg, msgErr)
+    _libs.lor.debug = hb.modes.debug
 end
 
 function disableCommand(cmd, disable)
@@ -491,35 +493,35 @@ function monitorCommand(cmd, pname)
     end
     local name = utils.getPlayerName(pname)
     if cmd == 'ignore' then
-        if (not ignoreList:contains(name)) then
-            ignoreList:add(name)
+        if (not hb.ignoreList:contains(name)) then
+            hb.ignoreList:add(name)
             atc('Will now ignore '..name)
-            if extraWatchList:contains(name) then
-                extraWatchList:remove(name)
+            if hb.extraWatchList:contains(name) then
+                hb.extraWatchList:remove(name)
             end
         else
             atc('Error: Already ignoring '..name)
         end
     elseif cmd == 'unignore' then
-        if (ignoreList:contains(name)) then
-            ignoreList:remove(name)
+        if (hb.ignoreList:contains(name)) then
+            hb.ignoreList:remove(name)
             atc('Will no longer ignore '..name)
         else
             atc('Error: Was not ignoring '..name)
         end
     elseif cmd == 'watch' then
-        if (not extraWatchList:contains(name)) then
-            extraWatchList:add(name)
+        if (not hb.extraWatchList:contains(name)) then
+            hb.extraWatchList:add(name)
             atc('Will now watch '..name)
-            if ignoreList:contains(name) then
-                ignoreList:remove(name)
+            if hb.ignoreList:contains(name) then
+                hb.ignoreList:remove(name)
             end
         else
             atc('Error: Already watching '..name)
         end
     elseif cmd == 'unwatch' then
-        if (extraWatchList:contains(name)) then
-            extraWatchList:remove(name)
+        if (hb.extraWatchList:contains(name)) then
+            hb.extraWatchList:remove(name)
             atc('Will no longer watch '..name)
         else
             atc('Error: Was not watching '..name)
@@ -538,64 +540,9 @@ function validate(args, numArgs, message)
 end
 
 function utils.getPlayerName(name)
-    local trg = utils.getTarget(name)
-    if (trg ~= nil) then
-        return trg.name
-    end
-    return nil
-end
-
-function utils.getTarget(targ)
-    if targ == nil then
-        return nil
-    elseif istable(targ) then
-        return targ
-    elseif tonumber(targ) and (tonumber(targ) > 255) then
-        return windower.ffxi.get_mob_by_id(tonumber(targ))
-    elseif S{'<me>','me'}:contains(targ) then
-        return windower.ffxi.get_mob_by_target('me')
-    elseif (targ == '<t>') then
-        return windower.ffxi.get_mob_by_target()
-    elseif isstr(targ) then
-        local target = windower.ffxi.get_mob_by_name(targ)
-        return target or windower.ffxi.get_mob_by_name(targ:ucfirst())
-    end
-    return nil
-end
-
-function getPartyMember(name)
-    local party = windower.ffxi.get_party()
-    for _,pmember in pairs(party) do
-        if (type(pmember) == 'table') and (pmember.name == name) then
-            return pmember
-        end
-    end
-    return nil
-end
-
-function utils.getMainPartyList()
-    local pt = windower.ffxi.get_party()
-    local pty = {pt.p0,pt.p1,pt.p2,pt.p3,pt.p4,pt.p5}
-    local party = S{}
-    for _,pm in pairs(pty) do
-        if (pm ~= nil) then
-            party:add(pm.name)
-        end
-    end
-    return party
-end
-
---[[
-    Returns the resource information for the given spell or ability name
---]]
-function utils.getActionFor(actionName)
-    local lower_name = actionName:lower()
-    for _,artype in pairs(action_resource_types) do
-        local action = lc_res[artype][lower_name]
-        if action ~= nil then
-            atcd(('%s %s %s[%s]: %s'):format(actionName,rarr,artype,action.id,action.en))
-            return action
-        end
+    local target = ffxi.get_target(name)
+    if target ~= nil then
+        return target.name
     end
     return nil
 end
@@ -607,7 +554,7 @@ end
 function utils.formatActionName(text)
     if (type(text) ~= 'string') or (#text < 1) then return nil end
     
-    local fromAlias = hb_config.aliases[text]
+    local fromAlias = hb.config.aliases[text]
     if (fromAlias ~= nil) then
         return fromAlias
     end
@@ -642,7 +589,6 @@ function utils.formatActionName(text)
     end
 end
 
-
 function formatName(text)
     if (text ~= nil) and (type(text) == 'string') then
         return text:lower():ucfirst()
@@ -666,14 +612,14 @@ end
 --==============================================================================
 
 function printStatus()
-    windower.add_to_chat(1, 'HealBot is now '..(active and 'active' or 'off')..'.')
+    windower.add_to_chat(1, 'HealBot is now '..(hb.active and 'active' or 'off')..'.')
 end
 
 --==============================================================================
 --          Initialization Functions
 --==============================================================================
 
-function load_configs()
+function utils.load_configs()
     local defaults = {
         textBoxes = {
             actionQueue={x=-125,y=300,font='Arial',size=10,visible=true},
@@ -687,7 +633,7 @@ function load_configs()
         ignoreTrusts=true
     }
     local loaded = lor_settings.load('data/settings.lua', defaults)
-    update_settings(loaded)
+    utils.update_settings(loaded)
     utils.refresh_textBoxes()
     
     local cure_potency_defaults = {
@@ -698,45 +644,44 @@ function load_configs()
         whm = {self={'Haste','Refresh'}}, rdm = {self={'Haste II','Refresh II'}}
     }
     
-    hb_config = {
+    hb.config = {
         aliases = config.load('../shortcuts/data/aliases.xml'),
         mabil_debuffs = lor_settings.load('data/mabil_debuffs.lua'),
         buff_lists = lor_settings.load('data/buffLists.lua', buff_lists_defaults),
         priorities = lor_settings.load('data/priorities.lua'),
         cure_potency = lor_settings.load('data/cure_potency.lua', cure_potency_defaults)
     }
-    hb_config.priorities.players =        hb_config.priorities.players or {}
-    hb_config.priorities.jobs =           hb_config.priorities.jobs or {}
-    hb_config.priorities.status_removal = hb_config.priorities.status_removal or {}
-    hb_config.priorities.buffs =          hb_config.priorities.buffs or {}
-    hb_config.priorities.debuffs =        hb_config.priorities.debuffs or {}
-    hb_config.priorities.dispel =         hb_config.priorities.dispel or {}     --not implemented yet
-    hb_config.priorities.default =        hb_config.priorities.default or 5
+    hb.config.priorities.players =        hb.config.priorities.players or {}
+    hb.config.priorities.jobs =           hb.config.priorities.jobs or {}
+    hb.config.priorities.status_removal = hb.config.priorities.status_removal or {}
+    hb.config.priorities.buffs =          hb.config.priorities.buffs or {}
+    hb.config.priorities.debuffs =        hb.config.priorities.debuffs or {}
+    hb.config.priorities.dispel =         hb.config.priorities.dispel or {}     --not implemented yet
+    hb.config.priorities.default =        hb.config.priorities.default or 5
     
     --process_mabil_debuffs()
-    local msg = configs_loaded and 'Rel' or 'L'
-    configs_loaded = true
+    local msg = hb.configs_loaded and 'Rel' or 'L'
+    hb.configs_loaded = true
     atcc(262, msg..'oaded config files.')
 end
 
 
 function process_mabil_debuffs()
-    local debuff_names = table.keys(hb_config.mabil_debuffs)
+    local debuff_names = table.keys(hb.config.mabil_debuffs)
     for _,abil_raw in pairs(debuff_names) do
         local abil_fixed = abil_raw:gsub('_',' '):capitalize()
-        hb_config.mabil_debuffs[abil_fixed] = S{}
-        local debuffs = hb_config.mabil_debuffs[abil_raw]
+        hb.config.mabil_debuffs[abil_fixed] = S{}
+        local debuffs = hb.config.mabil_debuffs[abil_raw]
         for _,debuff in pairs(debuffs) do
-            hb_config.mabil_debuffs[abil_fixed]:add(debuff)
+            hb.config.mabil_debuffs[abil_fixed]:add(debuff)
         end
-        hb_config.mabil_debuffs[abil_raw] = nil
+        hb.config.mabil_debuffs[abil_raw] = nil
     end
-    hb_config.mabil_debuffs:save()
+    hb.config.mabil_debuffs:save()
 end
 
 
-function update_settings(loaded)
-    settings = settings or {}
+function utils.update_settings(loaded)
     for key,val in pairs(loaded) do
         if istable(val) then
             settings[key] = settings[key] or {}
@@ -757,7 +702,6 @@ end
 
 function utils.refresh_textBoxes()
     local boxes = {'actionQueue','moveInfo','actionInfo','montoredBox'}
-    txts = txts or {}
     for _,box in pairs(boxes) do
         local bs = settings.textBoxes[box]
         local bst = {pos={x=bs.x, y=bs.y}}
@@ -770,10 +714,10 @@ function utils.refresh_textBoxes()
             bst.text.size = bs.size
         end
         
-        if (txts[box] ~= nil) then
-            txts[box]:destroy()
+        if (hb.txts[box] ~= nil) then
+            hb.txts[box]:destroy()
         end
-        txts[box] = texts.new(bst)
+        hb.txts[box] = texts.new(bst)
     end
 end
 

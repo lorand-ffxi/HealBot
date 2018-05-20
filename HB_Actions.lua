@@ -6,6 +6,8 @@
 --==============================================================================
 
 local actions = {queue=L()}
+local lor_res = _libs.lor.resources
+local ffxi = _libs.lor.ffxi
 
 
 local function local_queue_reset()
@@ -17,8 +19,8 @@ local function local_queue_insert(action, target)
 end
 
 local function local_queue_disp()
-    txts.actionQueue:text(getPrintable(actions.queue))
-	txts.actionQueue:visible(settings.textBoxes.actionQueue.visible)
+    hb.txts.actionQueue:text(getPrintable(actions.queue))
+    hb.txts.actionQueue:visible(settings.textBoxes.actionQueue.visible)
 end
 
 
@@ -33,7 +35,7 @@ function actions.get_defensive_action()
 		while (not cureq:empty()) do
 			local cact = cureq:pop()
             local_queue_insert(cact.action.en, cact.name)
-			if (action.cure == nil) and Assert.in_casting_range(cact.name) then
+			if (action.cure == nil) and healer:in_casting_range(cact.name) then
 				action.cure = cact
 			end
 		end
@@ -43,7 +45,7 @@ function actions.get_defensive_action()
 		while (not dbuffq:empty()) do
 			local dbact = dbuffq:pop()
             local_queue_insert(dbact.action.en, dbact.name)
-			if (action.debuff == nil) and Assert.in_casting_range(dbact.name) and Assert.ready_to_use(dbact.action) then
+			if (action.debuff == nil) and healer:in_casting_range(dbact.name) and healer:ready_to_use(dbact.action) then
 				action.debuff = dbact
 			end
 		end
@@ -53,7 +55,7 @@ function actions.get_defensive_action()
 		while (not buffq:empty()) do
 			local bact = buffq:pop()
             local_queue_insert(bact.action.en, bact.name)
-			if (action.buff == nil) and Assert.in_casting_range(bact.name) and Assert.ready_to_use(bact.action) then
+			if (action.buff == nil) and healer:in_casting_range(bact.name) and healer:ready_to_use(bact.action) then
 				action.buff = bact
 			end
 		end
@@ -82,17 +84,6 @@ function actions.get_defensive_action()
 end
 
 
-local function perform_action(action, target_str)
-    if action == nil then return end
-    local act = action.action
-    local target_name = action.name
-    local msg = action.msg or ''
-    target_str = target_str or target_name
-    atcd(act.en..sparr..target_name..msg)   --Debug message
-    wcmd(act.prefix, act.en, target_str)    --Send cmd to windower
-end
-
-
 function actions.take_action(player, partner, targ)
     buffs.checkOwnBuffs()
     local_queue_reset()
@@ -105,25 +96,25 @@ function actions.take_action(player, partner, targ)
         elseif (action.type == 'debuff') then
             buffs.debuffList[action.name][action.debuff.id].attempted = os.clock()
         end
-        perform_action(action)
+        healer:take_action(action)
     else                        --Otherwise, there may be an offensive action
-        if (targ ~= nil) or modes.independent then
+        if (targ ~= nil) or hb.modes.independent then
             local self_engaged = (player.status == 1)
             if (targ ~= nil) then
                 local partner_engaged = (partner.status == 1)
                 if (player.target_index == partner.target_index) then
                     if offense.assist.engage and partner_engaged and (not self_engaged) then
-                        healer.actor:send_cmd('input /attack on')
+                        healer:send_cmd('input /attack on')
                     else
-                        perform_action(actions.get_offensive_action(player), '<t>')
+                        healer:take_action(actions.get_offensive_action(player), '<t>')
                     end
                 else                            --Different targets
                     if partner_engaged and (not self_engaged) then
-                        healer.actor:send_cmd('input /as '..offense.assist.name)
+                        healer:send_cmd('input /as '..offense.assist.name)
                     end
                 end
-            elseif self_engaged and modes.independent then
-                perform_action(actions.get_offensive_action(player), '<t>')
+            elseif self_engaged and hb.modes.independent then
+                healer:take_action(actions.get_offensive_action(player), '<t>')
             end
             offense.cleanup()
         end
@@ -146,7 +137,7 @@ function actions.get_offensive_action(player)
     while not dbuffq:empty() do
         local dbact = dbuffq:pop()
         local_queue_insert(dbact.action.en, target.name)
-        if (action.db == nil) and Assert.in_casting_range(target) and Assert.ready_to_use(dbact.action) then
+        if (action.db == nil) and healer:in_casting_range(target) and healer:ready_to_use(dbact.action) then
             action.db = dbact
         end
     end
@@ -156,7 +147,7 @@ function actions.get_offensive_action(player)
         return action.db
     end
     
-    if (not settings.disable.ws) and (settings.ws ~= nil) and Assert.ready_to_use(utils.getActionFor(settings.ws.name)) then
+    if (not settings.disable.ws) and (settings.ws ~= nil) and healer:ready_to_use(lor_res.action_for(settings.ws.name)) then
         local sign = settings.ws.sign or '>'
         local hp = settings.ws.hp or 0
         local hp_ok = ((sign == '<') and (target.hpp <= hp)) or ((sign == '>') and (target.hpp >= hp))
@@ -164,8 +155,8 @@ function actions.get_offensive_action(player)
         local partner_ok = true
         if (settings.ws.partner ~= nil) then
             local pname = settings.ws.partner.name
-            local partner = getPartyMember(pname)
-            if (partner ~= nil) then
+            local partner = ffxi.get_party_member(pname)
+            if partner ~= nil then
                 partner_ok = partner.tp >= settings.ws.partner.tp
                 --partner_ok = partner.tp <= 500
             else
@@ -175,11 +166,11 @@ function actions.get_offensive_action(player)
         end
         
         if (hp_ok and partner_ok) then
-            return {action=utils.getActionFor(settings.ws.name),name='<t>'}
+            return {action=lor_res.action_for(settings.ws.name),name='<t>'}
         end
     elseif (not settings.disable.spam) and settings.spam.active and (settings.spam.name ~= nil) then
-        local spam_action = utils.getActionFor(settings.spam.name)
-        if (target.hpp > 0) and Assert.ready_to_use(spam_action) and Assert.in_casting_range('<t>') then
+        local spam_action = lor_res.action_for(settings.spam.name)
+        if (target.hpp > 0) and healer:ready_to_use(spam_action) and healer:in_casting_range('<t>') then
             local _p_ok = (player.vitals.mp >= spam_action.mp_cost)
             if spam_action.tp_cost ~= nil then
                 _p_ok = (_p_ok and (player.vitals.tp >= spam_action.tp_cost))

@@ -133,23 +133,6 @@ local function prep_geo_spells()
 end
 indi_spell_ids, geo_spell_ids = prep_geo_spells()
 
---Lower case resources
-local function get_lc_resources()
-    local targets = {'spells','job_abilities','weapon_skills'}
-    local lc_resources = {}
-    for _,target in pairs(targets) do
-        lc_resources[target] = {}
-        for id,action in pairs(res[target]) do
-            local action_name = action.en:lower()
-            lc_resources[target][action_name] = action
-            lc_resources[target][action_name].ja = nil
-        end
-    end
-    return lc_resources
-end
-lc_res = get_lc_resources()
-
-
 -----------------------------------------------------------------------------------------------------------
 --[[
 Copyright © 2016, Lorand

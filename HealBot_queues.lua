@@ -136,7 +136,7 @@ local function _getPlayerPriority(tname)
     if (tname == healer.name) then
         return 1
     end
-    local prios = hb_config.priorities
+    local prios = hb.config.priorities
     local player_mob = windower.ffxi.get_mob_by_name(tname)
     if player_mob == nil then
         return prios.default
@@ -144,7 +144,7 @@ local function _getPlayerPriority(tname)
     if player_mob.spawn_type == 14 then     --Trust
         return prios.default + 1
     end
-    local pmInfo = partyMemberInfo[tname]
+    local pmInfo = hb.partyMemberInfo[tname]
     local jobprio = prios.default
     if pmInfo ~= nil then
         jobprio = prios.jobs[pmInfo.job] or prios.jobs[pmInfo.job:lower()] or jobprio
@@ -164,7 +164,7 @@ function getBuffPriority(buff)
         atcfs('Was unable to retrieve buff for action for %s', buff)
     end
     
-    local prios = hb_config.priorities
+    local prios = hb.config.priorities
     return prios.buffs[nbuff.en] or prios.buffs[nbuff.enn] or prios.default
 end
 --getBuffPriority = traceable(_getBuffPriority)
@@ -172,14 +172,14 @@ end
 
 function getRemovalPriority(ailment)
     local debuff = utils.normalize_action(ailment, 'buffs')
-    local prios = hb_config.priorities
+    local prios = hb.config.priorities
     return prios.status_removal[debuff.en] or prios.status_removal[debuff.enn] or prios.default
 end
 
 
 function getDebuffPriority(debuff)
     local ndebuff = utils.normalize_action(debuff, 'buffs')
-    local prios = hb_config.priorities
+    local prios = hb.config.priorities
     return prios.debuffs[ndebuff.en] or prios.debuffs[ndebuff.enn] or prios.default
 end
 

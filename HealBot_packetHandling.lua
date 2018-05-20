@@ -22,7 +22,7 @@ function handle_incoming_chunk(id, data)
     if S{0x28,0x29}:contains(id) then   --Action / Action Message
         local monitored_ids = hb.getMonitoredIds()
         local ai = get_action_info(id, data)
-        healer.actor:update(id, ai)
+        healer:update_status(id, ai)
         if id == 0x28 then
             processAction(ai, monitored_ids)
         elseif id == 0x29 then
@@ -35,9 +35,9 @@ function handle_incoming_chunk(id, data)
         local pmName = parsed.Name
         local pmJobId = parsed['Main job']
         local pmSubJobId = parsed['Sub job']
-        partyMemberInfo[pmName] = partyMemberInfo[pmName] or {}
-        partyMemberInfo[pmName].job = res.jobs[pmJobId].ens
-        partyMemberInfo[pmName].subjob = res.jobs[pmSubJobId].ens
+        hb.partyMemberInfo[pmName] = hb.partyMemberInfo[pmName] or {}
+        hb.partyMemberInfo[pmName].job = res.jobs[pmJobId].ens
+        hb.partyMemberInfo[pmName].subjob = res.jobs[pmSubJobId].ens
         --atc('Caught party member update packet for '..parsed.Name..' | '..parsed.ID)
     elseif (id == 0x0DF) then
         local player = windower.ffxi.get_player()
@@ -60,7 +60,7 @@ function processMessage(ai, monitored_ids)
         if not (messages_blacklist:contains(ai.message_id)) then
             local target = windower.ffxi.get_mob_by_id(ai.target_id)
             
-            if modes.showPacketInfo then
+            if hb.modes.showPacketInfo then
                 local actor = windower.ffxi.get_mob_by_id(ai.actor_id)
                 local msg = res.action_messages[ai.message_id] or {en='???'}
                 local params = (', '):join(tostring(ai.param_1), tostring(ai.param_2), tostring(ai.param_3))
@@ -111,7 +111,7 @@ function processAction(ai, monitored_ids)
                         -- end
                     -- end
                 
-                    if modes.showPacketInfo then
+                    if hb.modes.showPacketInfo then
                         local msg = res.action_messages[tact.message_id] or {en='???'}
                         atcfs('[0x28]Action(%s): %s { %s } %s %s { %s } | %s', tact.message_id, actor.name, ai.param, rarr, target.name, tact.param, msg.en)
                     end
@@ -208,8 +208,8 @@ function registerEffect(ai, tact, actor, target, monitored_ids)
     elseif S{185}:contains(tact.message_id) then    --${actor} uses ${weapon_skill}.${lb}${target} takes ${number} points of damage.
         local mabil = res.monster_abilities[ai.param]
         if (mabil ~= nil) then
-            if (hb_config.mabil_debuffs[mabil.en] ~= nil) then
-                for dbf,_ in pairs(hb_config.mabil_debuffs[mabil.en]) do
+            if (hb.config.mabil_debuffs[mabil.en] ~= nil) then
+                for dbf,_ in pairs(hb.config.mabil_debuffs[mabil.en]) do
                     buffs.register_debuff(target, dbf, true)
                 end
             end
