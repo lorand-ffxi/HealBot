@@ -56,8 +56,10 @@ function buffs.review_active_buffs(player, buff_list)
                     buffs.register_buff(player, healer.indi.latest, healer.indi.info.active)
                 end
             else
-                if not active:contains(binfo.buff.id) then
-                    buffs.register_buff(player, res.buffs[binfo.buff.id], false)
+                if binfo.buff then                                              -- FIXME: Temporary fix for geo error
+                    if not active:contains(binfo.buff.id) then
+                        buffs.register_buff(player, res.buffs[binfo.buff.id], false)
+                    end
                 end
             end
         end
@@ -77,7 +79,7 @@ function buffs.getBuffQueue()
     local now = os.clock()
     for targ, buffset in pairs(buffs.buffList) do
         for spell_name, info in pairs(buffset) do
-            if (targ == healer.name) then
+            if (targ == healer.name) and (info.buff) then       -- FIXME: and info.buff = temp fix for geo issue
                 if activeBuffIds:contains(info.buff.id) then
                     buffs.register_buff(player, res.buffs[info.buff.id], true)
                 end
@@ -368,6 +370,7 @@ end
 
 
 function buffs.register_buff(target, buff, gain, action)
+    if not target then return end
 --local function _register_buff(target, buff, gain, action)
     --atcfs("%s -> %s [gain: %s]", buff, target.name, gain)
     if not isstr(buff) then
@@ -406,9 +409,11 @@ function buffs.register_buff(target, buff, gain, action)
     else
         buffs.buffList[tname] = buffs.buffList[tname] or {}
         for spell_name, info in pairs(buffs.buffList[tname]) do
-            if info.buff.id == nbuff.id then
-                bkey = spell_name
-                break
+            if info.buff then                                       -- FIXME: Temporary fix for geo error
+                if info.buff.id == nbuff.id then
+                    bkey = spell_name
+                    break
+                end
             end
         end
     end

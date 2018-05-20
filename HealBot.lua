@@ -1,7 +1,7 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.lastUpdate = '2018.05.20.0'
+_addon.lastUpdate = '2018.05.20.1'
 _addon.version = _addon.lastUpdate
 
 --[[
