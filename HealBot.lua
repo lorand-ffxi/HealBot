@@ -1,7 +1,7 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.lastUpdate = '2018.05.20.1'
+_addon.lastUpdate = '2018.05.21.0'
 _addon.version = _addon.lastUpdate
 
 --[[
@@ -93,8 +93,10 @@ hb._events['zone'] = windower.register_event('zone change', function(new_id, old
             windower.send_command('lua unload healBot')
         elseif zone_info.mog_house == true then
             hb.active = false
-        elseif indoor_zones:contains(zone_info.zone) then
+        elseif settings.deactivateIndoors and indoor_zones:contains(zone_info.zone) then
             hb.active = false
+        elseif settings.activateOutdoors and not indoor_zones:contains(zone_info.zone) then
+            hb.active = true
         end
     end
 end)

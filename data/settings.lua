@@ -40,5 +40,7 @@ return {
             ['x'] = 0,
             ['y'] = 18
         }
-    }
+    },
+    ['deactivateIndoors'] = true,
+    ['activateOutdoors'] = false
 }

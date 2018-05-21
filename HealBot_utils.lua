@@ -7,7 +7,7 @@
 --          Input Handling Functions
 --==============================================================================
 
-utils = {normalize={} }
+utils = {normalize={}}
 local lor_res = _libs.lor.resources
 local lc_res = lor_res.lc_res
 local ffxi = _libs.lor.ffxi
@@ -250,7 +250,7 @@ function processCommand(command,...)
         buffs.registerIgnoreDebuff(args, false)
     elseif S{'follow','f'}:contains(command) then
         local cmd = args[1] and args[1]:lower() or (settings.follow.active and 'off' or 'resume')
-        if S{'off','end','false','pause'}:contains(cmd) then
+        if S{'off','end','false','pause','stop','exit'}:contains(cmd) then
             settings.follow.active = false
         elseif S{'distance', 'dist', 'd'}:contains(cmd) then
             local dist = tonumber(args[2])
@@ -286,7 +286,11 @@ function processCommand(command,...)
     elseif command == 'debug' then
         toggleMode('debug', args[1], 'Debug mode', 'debug mode')
     elseif command == 'independent' then
-        toggleMode('independent', args[1], 'Independent mode', 'independent mode')    
+        toggleMode('independent', args[1], 'Independent mode', 'independent mode')
+    elseif S{'deactivateindoors','deactivate_indoors'}:contains(command) then
+        utils.toggleX(settings, 'deactivateIndoors', args[1], 'Deactivation in indoor zones', 'DeactivateIndoors')
+    elseif S{'activateoutdoors','activate_outdoors'}:contains(command) then
+        utils.toggleX(settings, 'activateOutdoors', args[1], 'Activation in outdoor zones', 'ActivateOutdoors')
     elseif txtbox_cmd_map[command] ~= nil then
         local boxName = txtbox_cmd_map[command]
         if utils.posCommand(boxName, args) then
@@ -630,7 +634,7 @@ function utils.load_configs()
         spam = {name='Stone'},
         healing = {min={cure=3,curaga=1,waltz=2,waltzga=1},curaga_min_targets=2},
         disable = {curaga=false},
-        ignoreTrusts=true
+        ignoreTrusts=true, deactivateIndoors=true, activateOutdoors=false
     }
     local loaded = lor_settings.load('data/settings.lua', defaults)
     utils.update_settings(loaded)
