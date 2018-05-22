@@ -159,12 +159,13 @@ function getBuffPriority(buff)
 --local function _getBuffPriority(buff)
     --atcf('getBuffPriority(%s)', tostring(buff))
     local nbuff = buffs.buff_for_action(buff)
-    
+    local prios = hb.config.priorities
+
     if nbuff == nil then
         atcfs('Was unable to retrieve buff for action for %s', buff)
+        return prios.default
     end
-    
-    local prios = hb.config.priorities
+
     return prios.buffs[nbuff.en] or prios.buffs[nbuff.enn] or prios.default
 end
 --getBuffPriority = traceable(_getBuffPriority)
