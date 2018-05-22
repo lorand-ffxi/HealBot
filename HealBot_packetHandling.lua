@@ -6,8 +6,9 @@
 --==============================================================================
 
 local messages_blacklist = _libs.lor.packets.messages_blacklist
-local messages_initiating = _libs.lor.packets.messages_initiating
-local messages_completing = _libs.lor.packets.messages_completing
+local get_bit_packed = _libs.lor.packets.get_bit_packed
+--local messages_initiating = _libs.lor.packets.messages_initiating
+--local messages_completing = _libs.lor.packets.messages_completing
 
 local get_action_info = _libs.lor.packets.get_action_info
 local parse_char_update = _libs.lor.packets.parse_char_update
@@ -30,23 +31,70 @@ function handle_incoming_chunk(id, data)
         end
     elseif (id == 0x037) then
         healer.indi.info = parse_char_update(data)
-    elseif (id == 0x0DD) then           --Party member update
+    elseif (id == 0x0DD) then                                                               --Party member update
         local parsed = packets.parse('incoming', data)
         local pmName = parsed.Name
         local pmJobId = parsed['Main job']
         local pmSubJobId = parsed['Sub job']
+        local pmJobLvl = parsed['Main job level']
         hb.partyMemberInfo[pmName] = hb.partyMemberInfo[pmName] or {}
         hb.partyMemberInfo[pmName].job = res.jobs[pmJobId].ens
         hb.partyMemberInfo[pmName].subjob = res.jobs[pmSubJobId].ens
         --atc('Caught party member update packet for '..parsed.Name..' | '..parsed.ID)
-    elseif (id == 0x0DF) then
-        local player = windower.ffxi.get_player()
-        local parsed = packets.parse('incoming', data)
-        if (player ~= nil) and (player.id ~= parsed.ID) then
-            local person = windower.ffxi.get_mob_by_id(parsed.ID)
-            --atc('Caught char update packet for '..person.name)
+--    elseif (id == 0x0DF) then                                                             -- Non-party member update
+--    elseif id == 0x0E2 then
+--        local player = healer
+--        if player.id == nil then
+--            player = windower.ffxi.get_player()
+--        end
+--        local parsed = packets.parse('incoming', data)
+--        if player.id then   --and (player.id ~= parsed.ID) then
+--            local person = {name=parsed['Name']}
+--            local person = windower.ffxi.get_mob_by_id(parsed.ID)
+--            local pmJobId = parsed['Main job'] or '?'
+--            local pmSubJobId = parsed['Sub job'] or '?'
+--            local pmJobLvl = parsed['Main job level'] or -1
+--            local pmHp = parsed['HP']
+--            local pmHpp = parsed['HPP']
+--            atc(('Char update packet for %s: %d%s @ %d HP = %d%%'):format(person.name, pmJobLvl, pmJobId, pmHp, pmHpp))
+--            --atc('Caught char update packet for '..person.name)
+--        end
+    elseif id == 0x076 then     -- Party buff info
+        processPartyBuffs(data)
+    end
+end
+
+function processPartyBuffs(raw_data)
+    --[[
+        Process party buff incoming packets.  These hold up to 5 buffs per member.  These packets are triggered when a
+        party member's buffs change.
+    --]]
+    local parsed = packets.parse('incoming', raw_data)
+--    local party_buffs = {}
+    for i=1, 5 do
+        local player_id = parsed['ID '..i]
+        if player_id ~= 0 then
+            local party_member = windower.ffxi.get_mob_by_id(player_id)
+--            party_buffs[party_member.name] = S{}
+            local mask = parsed['Bit Mask '..i]
+            local buffs = parsed['Buffs '..i]
+            for b=0, 4 do
+                local mask_2b = get_bit_packed(mask, b*2, (b+1)*2)
+                local buff_id_byte = get_bit_packed(buffs, b*8, (b+1)*8)
+                local buff_id = buff_id_byte + mask_2b
+                local buff = res.buffs[buff_id]
+                if buff and (buff_id ~= 0) then
+                    if enfeebling:contains(buff_id) then
+                        buffs.register_debuff(party_member, buff, true)
+                    else
+                        buffs.register_buff(party_member, buff, true)
+                    end
+--                    party_buffs[party_member.name]:add(buff.en)
+                end
+            end
         end
     end
+--    pprint(party_buffs, 'Party Buff Info')
 end
 
 
@@ -56,6 +104,9 @@ end
     :param set monitored_ids: the IDs of PCs that are being monitored
 --]]
 function processMessage(ai, monitored_ids)
+    if hb.asleep:contains(ai.actor_id) and messages_actions:contains(ai.message_id) then
+        hb.asleep:remove(ai.actor_id)
+    end
     if monitored_ids[ai.actor_id] or monitored_ids[ai.target_id] then
         if not (messages_blacklist:contains(ai.message_id)) then
             local target = windower.ffxi.get_mob_by_id(ai.target_id)
@@ -85,6 +136,9 @@ end
     :param set monitored_ids: the IDs of PCs that are being monitored
 --]]
 function processAction(ai, monitored_ids)
+    if hb.asleep:contains(ai.actor_id) then
+        hb.asleep:remove(ai.actor_id)
+    end
     for _,targ in pairs(ai.targets) do
         if monitored_ids[ai.actor_id] or monitored_ids[targ.id] then
             local actor = windower.ffxi.get_mob_by_id(ai.actor_id)
@@ -172,7 +226,7 @@ function registerEffect(ai, tact, actor, target, monitored_ids)
         if (spell ~= nil) then
             if spells_statusRemoval:contains(spell.id) then
                 --The debuff must have worn off or have been removed already
-                local debuffs = removal_map[spell.en]
+                local debuffs = removal2debuff_map[spell.en]
                 if (debuffs ~= nil) then
                     for _,debuff in pairs(debuffs) do
                         buffs.register_debuff(target, debuff, false)
@@ -205,7 +259,8 @@ function registerEffect(ai, tact, actor, target, monitored_ids)
         for _,lost_debuff in pairs(lost_debuffs) do
             buffs.register_debuff(target, lost_debuff, false)
         end
-    elseif S{185}:contains(tact.message_id) then    --${actor} uses ${weapon_skill}.${lb}${target} takes ${number} points of damage.
+    elseif S{185}:contains(tact.message_id) then
+        --${actor} uses ${weapon_skill}.${lb}${target} takes ${number} points of damage.
         local mabil = res.monster_abilities[ai.param]
         if (mabil ~= nil) then
             if (hb.config.mabil_debuffs[mabil.en] ~= nil) then
@@ -214,7 +269,8 @@ function registerEffect(ai, tact, actor, target, monitored_ids)
                 end
             end
         end
-    elseif S{655}:contains(tact.message_id) and targ_is_enemy then    --${actor} casts ${spell}.${lb}${target} completely resists the spell.
+    elseif messages_immune:contains(tact.message_id) and targ_is_enemy then
+        --${actor} casts ${spell}.${lb}${target} completely resists the spell.
         offense.register_immunity(target, res.buffs[tact.param])
     elseif messages_paralyzed:contains(tact.message_id) then
         buffs.register_debuff(actor, 'paralysis', true)
@@ -223,7 +279,7 @@ end
 
 -----------------------------------------------------------------------------------------------------------
 --[[
-Copyright © 2016, Lorand
+Copyright © 2018, Lorand
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.

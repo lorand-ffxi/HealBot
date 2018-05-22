@@ -8,8 +8,26 @@
 rarr = string.char(129,168)
 sparr = ' '..rarr..' '
 
-messages_magicDamage = S{2,252}
-messages_gainEffect = S{73,82,127,128,141,160,164,166,186,194,203,205,230,236,237,242,243,266,267,268,269,270,271,272,277,278,279,280,319,320,321,374,375,412,645}
+messages_magicDamage = S{2,252} --,650,747}
+messages_gainEffect = S{73,82,127,128,141,160,164,166,186,194,203,205,230,236,237,242,243,266,267,268,269,270,271,272,277,278,279,280,319,320,321,374,375,412,645} --,754,755}
+
+-- $ cat action_messages.lua | egrep '\$\{actor\}' | egrep -iv '(experience|merit|besieged|capacity|job) point|level|chasing|obtains|\[523\]|treasure|achieves' | grep -oP '\[\K\d+' | paste -sd,
+messages_actions = S{1,2,3,6,7,13,14,15,16,19,23,28,29,33,34,35,41,42,43,44,45,47,49,63,67,69,70,71,75,77,82,83,84,85,86,91,93,97,99,100,101,102,103,106,108,109,110,113,114,115,116,117,118,119,120,121,122,123,125,126,127,129,131,132,133,134,135,136,137,138,139,140,141,142,143,144,146,148,150,152,153,156,157,158,159,166,167,184,185,186,187,188,189,190,191,192,194,197,210,211,212,213,214,221,224,225,226,227,228,230,231,236,237,238,240,241,242,243,244,245,247,248,252,268,271,274,275,303,304,305,306,309,310,311,312,315,317,318,319,320,321,322,323,324,326,327,329,330,331,332,333,334,335,341,342,352,353,354,355,360,362,364,369,370,371,372,373,374,375,378,379,382,383,399,400,401,402,405,406,407,408,409,411,412,413,414,416,417,418,420,422,424,425,426,429,430,431,432,433,435,437,439,441,442,451,452,453,454,460,478,493,495,496,497,498,499,500,515,516,519,520,521,522,526,527,528,529,532,533,534,535,536,539,560,563,567,570,572,574,575,576,577,585,591,592,593,594,595,596,597,598,599,600,602,604,606,607,642,644,645,646,647,648,650,651,653,655,657,658,661,663,664,665,667,668,670,671,672,674,675,679,687,688,689,708,711,716,730,734,736,737,738,743,744,746,747,748,750,752,754,755,758,762,763,764,772,778,779,780,781}
+
+--[[
+TODO: Classify
+[669] = {id=669,en="Magic damage of a certain element is reduced for ${target}.",color=101},
+[670] = {id=670,en="${actor} uses ${ability}.${lb}${target} can now absorb magic damage of a certain element.",color=101},
+[671] = {id=671,en="${actor} uses ${ability}.${lb}${target} now has enhanced resistance.",color=101},
+[672] = {id=672,en="${actor} uses ${ability}.${lb}${target} receives the effect of Gambit, reducing defense against magic of a certain element.",color=101},
+[737] = {id=737,en="${actor} uses ${ability}. ${lb}${number} of ${target} magic effects is drained.",color=101},
+[739] = {id=739,en="${target} receives ${number} magical effects.",color=1},
+[757] = {id=757,en="${number} of ${target}'s effects disappears!",color=101},
+[762] = {id=762,en="${actor} uses ${spell}.${lb}All of ${target}'s status parameters are boosted.",color=1},
+[776] = {id=776,en="Additional effect: ${target} is chainbound.",color=1},
+[778] = {id=778,en="${actor} uses ${ability}.${lb}${actor} copies ${number} magical effects from ${target}.",color=1},
+[779] = {id=779,en="${actor} uses ${ability}.${lb}A barrier begins to pulsate around ${target}.",color=1},
+--]]
 
 msg_gain_no_source = S{73,128,160,164,166,203,205,266,267,269,270,272,277,278,279,280}
 msg_gain_abil = S{127,141,319,320,321,645}
@@ -20,7 +38,8 @@ msg_gain_other = S{374,375,412}
 messages_loseEffect = S{64,74,83,123,159,168,204,206,322,341,342,343,344,350,378,453,531,647}
 messages_wearOff = S{204,206}
 messages_paralyzed = S{29,84}
-messages_noEffect = S{75}
+messages_noEffect = S{75}   -- ,323,659}
+messages_immune = S{655} --,656}
 messages_specific_debuff_gain = {
     [142]={'Accuracy Down','Evasion Down'},
     [144]={'Accuracy Down','Evasion Down'},
@@ -37,11 +56,22 @@ messages_specific_debuff_gain = {
     --[521]={'Weakened Daze'},
     [533]={'Accuracy Down'},
     [534]={'Attack Down'},
-    [591]={'Bewildered Daze'}
+    [591]={'Bewildered Daze'},
+--    [593] = {'Attack Down'},
+--    [594] = {'Defense Down'},
+--    [595] = {'Magic Atk. Down'},
+--    [596] = {'Magic Def. Down'},
+--    [597] = {'Evasion Down'},
+--    [598] = {'Accuracy Down'},
+--    [599] = {'Slow'},
 }
 messages_specific_debuff_lose = {
     [351]={'blindness','paralysis','poison','silence'},
     [359]={'doom'},
+}
+messages_specific_buff_gain = {
+    [667]={'Accuracy Boost','Evasion Boost'},   -- ${actor} uses ${ability}.${lb}Accuracy and evasion are enhanced.
+    [668]={'Vallation'},
 }
 
 spells_buffs = S{43,44,45,46,47,48,49,50,51,52,53,54,55,57,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,84,85,86,87,88,89,90,91,92,96,97,99,100,101,102,103,104,105,106,107,108,109,110,111,113,114,115,116,117,118,119,125,126,127,128,129,130,131,132,133,134,135,136,137,138,141,142,249,250,251,277,287,308,309,310,311,312,313,314,315,316,317,318,338,339,340,353,354,355,358,473,476,477,478,479,480,481,482,483,484,485,486,487,488,489,490,491,492,493,495,504,505,506,507,509,510,511,768,769,770,771,772,773,774,775,776,777,778,779,780,781,782,783,784,785,786,787,788,789,790,791,792,793,794,795,796,797,798,800,801,802,803,804,805,806,807,808,809,810,811,812,813,814,815,816,840,845,846}
@@ -55,12 +85,13 @@ spells_summoning = S{288,289,290,291,292,293,294,295,296,297,298,299,300,301,302
 spells_trust = S{896,897,898,899,900,901,902,903,904,905,906,907,908,909,910,911,912,913,914,916,917,918,919,920,921,922,923,924,925,926,927,928,929,930,931,932,933,934,935,936,937,938,939,941,942,943,944,945,946,947,948,949,950,951,952,958,959,960,961,962,964}
 
 enfeebling = T{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,155,156,157,158,159,167,168,174,175,177,186,189,192,193,194,223,259,260,261,262,263,264,298,378,379,380,386,387,388,389,390,391,392,393,394,395,396,397,398,399,400,404,448,449,450,451,452,473,540,557,558,559,560,561,562,563,564,565,566,567,597}
+buffs_sleep = S{2,19,193}
 
 spell_debuff_idmap = {[23]=134,[24]=134,[25]=134,[26]=134,[27]=134,[33]=134,[34]=134,[35]=134,[36]=134,[37]=134,[56]=13,[58]=4,[59]=6,[79]=13,[80]=4,[98]=2,[112]=156,[216]=12,[217]=12,[220]=3,[221]=3,[222]=3,[223]=3,[224]=3,[225]=3,[226]=3,[227]=3,[228]=3,[229]=3,[230]=135,[231]=135,[232]=135,[233]=135,[234]=135,[235]=128,[236]=129,[237]=130,[238]=131,[239]=132,[240]=133,[242]=146,[252]=10,[253]=2,[254]=5,[255]=7,[256]=8,[257]=9,[258]=11,[259]=2,[266]=136,[267]=137,[268]=138,[269]=139,[270]=140,[271]=141,[272]=142,[273]=2,[274]=2,[276]=5,[278]=186,[279]=186,[280]=186,[281]=186,[282]=186,[283]=186,[284]=186,[285]=186,[286]=21,[356]=4,[357]=13,[359]=6,[361]=5,[362]=11,[363]=2,[364]=2,[365]=7,[366]=12,[368]=192,[369]=192,[370]=192,[371]=192,[372]=192,[373]=192,[374]=192,[375]=192,[376]=193,[377]=193,[421]=194,[422]=194,[423]=194,[454]=217,[455]=217,[456]=217,[457]=217,[458]=217,[459]=217,[460]=217,[461]=217,[463]=193,[471]=193,[472]=223,[841]=148,[842]=148,[843]=404,[844]=404,[871]=217,[872]=217,[873]=217,[874]=217,[875]=217,[876]=217,[877]=217,[878]=217,[879]=597,[882]=148,[883]=404,[884]=21,[885]=186,[886]=186,[887]=186,[888]=186,[889]=186,[890]=186,[891]=186,[892]=186}
 
 buff_map = {['Barfira']='Barfire',['Barblizzara']='Barblizzard',['Baraera']='Baraero',['Barstonra']='Barstone',['Barthundra']='Barthunder',['Barwatera']='Barwater',['Baramnesra']='Baramnesia',['Barsleepra']='Barsleep',['Barpoisonra']='Barpoison',['Barparalyzra']='Barparalyze',['Barblindra']='Barblind',['Barsilencera']='Barsilence',['Barpetra']='Barpetrify',['Barvira']='Barvirus',['Blaze Spikes']='Blaze Spikes',['Ice Spikes']='Ice Spikes',['Shock Spikes']='Shock Spikes',['Dread Spikes']='Dread Spikes',['Boost-STR']='STR Boost',['Boost-DEX']='DEX Boost',['Boost-VIT']='VIT Boost',['Boost-AGI']='AGI Boost',['Boost-INT']='INT Boost',['Boost-MND']='MND Boost',['Boost-CHR']='CHR Boost',['Gain-STR']='STR Boost',['Gain-DEX']='DEX Boost',['Gain-VIT']='VIT Boost',['Gain-AGI']='AGI Boost',['Gain-INT']='INT Boost',['Gain-MND']='MND Boost',['Gain-CHR']='CHR Boost',['Temper']='Multi Strikes',['Enfire II']='Enfire II',['Enblizzard II']='Enblizzard II',['Enaero II']='Enaero II',['Enstone II']='Enstone II',['Enthunder II']='Enthunder II',['Enwater II']='Enwater II',["Army's Paeon"]='Paeon',["Army's Paeon II"]='Paeon',["Army's Paeon III"]='Paeon',["Army's Paeon IV"]='Paeon',["Army's Paeon V"]='Paeon',["Army's Paeon VI"]='Paeon',["Army's Paeon VII"]='Paeon',["Army's Paeon VIII"]='Paeon',["Mage's Ballad"]='Ballad',["Mage's Ballad II"]='Ballad',["Mage's Ballad III"]='Ballad',["Knight's Minne"]='Minne',["Knight's Minne II"]='Minne',["Knight's Minne III"]='Minne',["Knight's Minne IV"]='Minne',["Knight's Minne V"]='Minne',["Valor Minuet"]='Minuet',["Valor Minuet II"]='Minuet',["Valor Minuet III"]='Minuet',["Valor Minuet IV"]='Minuet',["Valor Minuet V"]='Minuet',["Sword Madrigal"]='Madrigal',["Blade Madrigal"]='Madrigal',["Hunter's Prelude"]='Prelude',["Archer's Prelude"]='Prelude',["Sheepfoe Mambo"]='Mambo',["Dragonfoe Mambo"]='Mambo',["Fowl Aubade"]='Aubade',["Herb Pastoral"]='Pastoral',["Shining Fantasia"]='Fantasia',["Scop's Operetta"]='Operetta',["Puppet's Operetta"]='Operetta',["Jester's Operetta"]='Operetta',["Gold Capriccio"]='Capriccio',["Devotee Serenade"]='Serenade',["Warding Round"]='Round',["Goblin Gavotte"]='Gavotte',["Cactuar Fugue"]='Fugue',["Protected Aria"]='Aria',["Advancing March"]='March',["Victory March"]='March',["Sinewy Etude"]='Etude',["Dextrous Etude"]='Etude',["Vivacious Etude"]='Etude',["Quick Etude"]='Etude',["Learned Etude"]='Etude',["Spirited Etude"]='Etude',["Enchanting Etude"]='Etude',["Herculean Etude"]='Etude',["Uncanny Etude"]='Etude',["Vital Etude"]='Etude',["Swift Etude"]='Etude',["Sage Etude"]='Etude',["Logical Etude"]='Etude',["Bewitching Etude"]='Etude',["Fire Carol"]='Carol',["Ice Carol"]='Carol',["Wind Carol"]='Carol',["Earth Carol"]='Carol',["Lightning Carol"]='Carol',["Water Carol"]='Carol',["Light Carol"]='Carol',["Dark Carol"]='Carol',["Fire Carol II"]='Carol',["Ice Carol II"]='Carol',["Wind Carol II"]='Carol',["Earth Carol II"]='Carol',["Lightning Carol II"]='Carol',["Water Carol II"]='Carol',["Light Carol II"]='Carol',["Dark Carol II"]='Carol',["Goddess's Hymnus"]='Hymnus',["Chocobo Mazurka"]='Mazurka',["Raptor Mazurka"]='Mazurka',["Foe Sirvente"]='Sirvente',["Adventurer's Dirge"]='Dirge',["Sentinel's Scherzo"]='Scherzo',["Sandstorm II"]=592,["Rainstorm II"]=594,["Windstorm II"]=591,["Firestorm II"]=589,["Hailstorm II"]=590,["Thunderstorm II"]=593,["Voidstorm II"]=596,["Aurorastorm II"]=595}
-debuff_map = {['Accuracy Down']='Erase',['addle']='Erase',['AGI Down']='Erase',['Attack Down']='Erase',['bind']='Erase',['Bio']='Erase',['blindness']='Blindna',['Burn']='Erase',['Choke']='Erase',['CHR Down']='Erase',['curse']='Cursna',['Defense Down']='Erase',['DEX Down']='Erase',['Dia']='Erase',['disease']='Viruna',['doom']='Cursna',['Drown']='Erase',['Elegy']='Erase',['Evasion Down']='Erase',['Frost']='Erase',['Inhibit TP']='Erase',['INT Down']='Erase',['Lullaby']='Cure',['Magic Acc. Down']='Erase',['Magic Atk. Down']='Erase',['Magic Def. Down']='Erase',['Magic Evasion Down']='Erase',['Max HP Down']='Erase',['Max MP Down']='Erase',['Max TP Down']='Erase',['MND Down']='Erase',['Nocturne']='Erase',['paralysis']='Paralyna',['petrification']='Stona',['plague']='Viruna',['poison']='Poisona',['Rasp']='Erase',['Requiem']='Erase',['Shock']='Erase',['silence']='Silena',['slow']='Erase',['STR Down']='Erase',['VIT Down']='Erase',['weight']='Erase'}
-removal_map = {['Blindna']={'blindness'},['Cursna']={'curse','doom'},['Paralyna']={'paralysis'},['Poisona']={'poison'},['Silena']={'silence'},['Stona']={'petrification'},['Viruna']={'disease','plague'},['Erase']={'weight','Accuracy Down','addle','AGI Down','Attack Down','bind','Bio','Burn','Choke','CHR Down','Defense Down','DEX Down','Dia','Drown','Elegy','Evasion Down','Frost','Inhibit TP','INT Down','Magic Acc. Down','Magic Atk. Down','Magic Def. Down','Magic Evasion Down','Max HP Down','Max MP Down','Max TP Down','MND Down','Nocturne','Rasp','Requiem','Shock','slow','STR Down','VIT Down'}}
+debuff2removal_map = {['Accuracy Down']='Erase',['addle']='Erase',['AGI Down']='Erase',['Attack Down']='Erase',['bind']='Erase',['Bio']='Erase',['blindness']='Blindna',['Burn']='Erase',['Choke']='Erase',['CHR Down']='Erase',['curse']='Cursna',['Defense Down']='Erase',['DEX Down']='Erase',['Dia']='Erase',['disease']='Viruna',['doom']='Cursna',['Drown']='Erase',['Elegy']='Erase',['Evasion Down']='Erase',['Frost']='Erase',['Inhibit TP']='Erase',['INT Down']='Erase',['Lullaby']='Cure',['Magic Acc. Down']='Erase',['Magic Atk. Down']='Erase',['Magic Def. Down']='Erase',['Magic Evasion Down']='Erase',['Max HP Down']='Erase',['Max MP Down']='Erase',['Max TP Down']='Erase',['MND Down']='Erase',['Nocturne']='Erase',['paralysis']='Paralyna',['petrification']='Stona',['plague']='Viruna',['poison']='Poisona',['Rasp']='Erase',['Requiem']='Erase',['Shock']='Erase',['silence']='Silena',['slow']='Erase',['STR Down']='Erase',['VIT Down']='Erase',['weight']='Erase'}
+removal2debuff_map = {['Blindna']={'blindness'},['Cursna']={'curse','doom'},['Paralyna']={'paralysis'},['Poisona']={'poison'},['Silena']={'silence'},['Stona']={'petrification'},['Viruna']={'disease','plague'},['Erase']={'weight','Accuracy Down','addle','AGI Down','Attack Down','bind','Bio','Burn','Choke','CHR Down','Defense Down','DEX Down','Dia','Drown','Elegy','Evasion Down','Frost','Inhibit TP','INT Down','Magic Acc. Down','Magic Atk. Down','Magic Def. Down','Magic Evasion Down','Max HP Down','Max MP Down','Max TP Down','MND Down','Nocturne','Rasp','Requiem','Shock','slow','STR Down','VIT Down'}}
 
 debuff_casemap = {['nocturne']='Nocturne',['accuracy down']='Accuracy Down',['magic def. down']='Magic Def. Down',['inhibit tp']='Inhibit TP',['weight']='weight',['str down']='STR Down',['slow']='slow',['defense down']='Defense Down',['elegy']='Elegy',['choke']='Choke',['max hp down']='Max HP Down',['lullaby']='Lullaby',['paralysis']='paralysis',['int down']='INT Down',['petrification']='petrification',['vit down']='VIT Down',['requiem']='Requiem',['curse']='curse',['bio']='Bio',['chr down']='CHR Down',['disease']='disease',['frost']='Frost',['bind']='bind',['doom']='doom',['silence']='silence',['rasp']='Rasp',['addle']='addle',['poison']='poison',['evasion down']='Evasion Down',['dia']='Dia',['mnd down']='MND Down',['max mp down']='Max MP Down',['max tp down']='Max TP Down',['burn']='Burn',['magic atk. down']='Magic Atk. Down',['magic evasion down']='Magic Evasion Down',['attack down']='Attack Down',['plague']='plague',['drown']='Drown',['shock']='Shock',['blindness']='blindness',['dex down']='DEX Down',['agi down']='AGI Down',['magic acc. down']='Magic Acc. Down'}
 
@@ -133,9 +164,26 @@ local function prep_geo_spells()
 end
 indi_spell_ids, geo_spell_ids = prep_geo_spells()
 
+action_categories = {
+    [1] = 'Melee attack',
+    [2] = 'Ranged attack finish',
+    [3] = 'Weapon Skill finish',
+    [4] = 'Casting finish',
+    [5] = 'Item finish',
+    [6] = 'Job Ability',
+    [7] = 'Weapon Skill start',
+    [8] = 'Casting start',
+    [9] = 'Item start',
+    [11] = 'NPC TP finish',
+    [12] = 'Ranged attack start',
+    [13] = 'Avatar TP finish',
+    [14] = 'Job Ability DNC',
+    [15] = 'Job Ability RUN',
+}
+
 -----------------------------------------------------------------------------------------------------------
 --[[
-Copyright © 2016, Lorand
+Copyright © 2018, Lorand
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.

@@ -74,7 +74,7 @@ function cu.get_missing_hps()
         else --If the player doesn't have a hp field, guesstimate how much they are missing
             hpMissing = 1500 - math.ceil((trg.hpp/100)*1500)
         end
-        hpTable[trg.name] = {['missing']=hpMissing, ['hpp']=trg.hpp}
+        hpTable[trg.name] = {missing=hpMissing, hpp=trg.hpp, id=trg.id}
     end
     return hpTable
 end
@@ -97,6 +97,9 @@ function cu.injured_pt_members()
                 pos = Pos.of(trg.name),
                 danger = cu.getDangerLevel(trg.hpp)
             }
+            if hb.asleep:contains(trg.id) then
+                injured[trg.name].danger = injured[trg.name].danger + 0.5
+            end
         end
     end
     return injured
@@ -182,7 +185,7 @@ function cu.get_cure_queue()
     for name,p in pairs(hp_table) do
         if p.hpp < 95 then
             local tier = cu.get_cure_tier_for_hp(p.missing, settings.healing.mode)
-            if tier >= settings.healing.min[settings.healing.mode] then
+            if (tier >= settings.healing.min[settings.healing.mode]) or hb.asleep:contains(p.id) then
                 local spell = cu.get_usable_cure(tier, settings.healing.mode)
                 if spell ~= nil then
                     cq:enqueue('cure', spell, name, p.hpp, (' (%s)'):format(p.missing))
@@ -294,7 +297,7 @@ return cu
 
 --==============================================================================
 --[[
-Copyright © 2016, Lorand
+Copyright © 2018, Lorand
 All rights reserved.
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
     * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.

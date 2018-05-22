@@ -100,11 +100,11 @@ function buffs.getDebuffQueue()
     local dbq = ActionQueue.new()
     local now = os.clock()
     for targ, debuffs in pairs(buffs.debuffList) do
-        for id, info in pairs(debuffs) do
-            local debuff = res.buffs[id]
-            local removalSpellName = debuff_map[debuff.en]
-            if (removalSpellName ~= nil) then
-                if (info.attempted == nil) or ((now - info.attempted) >= 3) then
+        for debuff_id, debuff_info in pairs(debuffs) do
+            local debuff = res.buffs[debuff_id]
+            local removalSpellName = debuff2removal_map[debuff.en]
+            if removalSpellName ~= nil then
+                if (debuff_info.attempted == nil) or ((now - debuff_info.attempted) >= 3) then
                     local spell = res.spells:with('en', removalSpellName)
                     if healer:can_use(spell) and ffxi.target_is_valid(spell, targ) then
                         local ign = buffs.ignored_debuffs[debuff.en]
@@ -225,12 +225,11 @@ end
 
 
 function buffs.getAction(actionName, target)
-    local me = windower.ffxi.get_player()
     local action = nil
     local spell = res.spells:with('en', actionName)
     if (spell ~= nil) and healer:can_use(spell) then
         action = spell
-    elseif (target ~= nil) and (target.id == me.id) then
+    elseif (target ~= nil) and (target.id == healer.id) then
         local abil = res.job_abilities:with('en', actionName)
         if (abil ~= nil) and healer:can_use(abil) then
             action = abil
@@ -299,11 +298,10 @@ end
 --==============================================================================
 
 
---[[
-    Register a debuff gain/loss on the given target, optionally with the action
-    that caused the debuff
---]]
 function buffs.register_debuff(target, debuff, gain, action)
+    --[[
+        Register a debuff gain/loss on the given target, optionally with the action that caused the debuff
+    --]]
     debuff = utils.normalize_action(debuff, 'buffs')
     
     if debuff == nil then
@@ -320,6 +318,7 @@ function buffs.register_debuff(target, debuff, gain, action)
         offense.mobs[tid] = offense.mobs[tid] or {}
     else
         buffs.debuffList[tname] = buffs.debuffList[tname] or {}
+        hb.name2id[tname] = tid
     end
     local debuff_tbl = is_enemy and offense.mobs[tid] or buffs.debuffList[tname]
     local msg = is_enemy and 'mob 'or ''
@@ -337,13 +336,21 @@ function buffs.register_debuff(target, debuff, gain, action)
                 end
             end
         end
-        debuff_tbl[debuff.id] = {landed = os.clock()}
+        if buffs_sleep:contains(debuff.id) then
+            hb.asleep:add(tid)
+        else
+            debuff_tbl[debuff.id] = {landed = os.clock()}
+        end
         if is_enemy and hb.modes.mob_debug then
             atc(('Detected %sdebuff: %s %s %s [%s]'):format(msg, debuff.en, rarr, tname, tid))
         end
         atcd(('Detected %sdebuff: %s %s %s [%s]'):format(msg, debuff.en, rarr, tname, tid))
     else
-        debuff_tbl[debuff.id] = nil
+        if buffs_sleep:contains(debuff.id) then
+            hb.asleep:remove(tid)
+        else
+            debuff_tbl[debuff.id] = nil
+        end
         if is_enemy and hb.modes.mob_debug then
             atc(('Detected %sdebuff: %s wore off %s [%s]'):format(msg, debuff.en, tname, tid))
         end

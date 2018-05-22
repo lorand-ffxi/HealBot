@@ -1,7 +1,7 @@
 _addon.name = 'HealBot'
 _addon.author = 'Lorand'
 _addon.command = 'hb'
-_addon.lastUpdate = '2018.05.22.0'
+_addon.lastUpdate = '2018.05.22.1'
 _addon.version = _addon.lastUpdate
 
 --[[
@@ -21,7 +21,7 @@ TODO:
 require('luau')
 require('lor/lor_utils')
 _libs.lor.include_addon_name = true
-_libs.lor.req('all', {n='packets',v='2016.10.27.0'})
+_libs.lor.req('all', {n='packets',v='2018.05.22.0'})
 _libs.req('queues')
 lor_settings = _libs.lor.settings
 serialua = _libs.lor.serialization
@@ -29,7 +29,7 @@ serialua = _libs.lor.serialization
 hb = {
     active = false, configs_loaded = false, partyMemberInfo = {}, ignoreList = S{}, extraWatchList = S{},
     modes = {['showPacketInfo'] = false, ['debug'] = false, ['mob_debug'] = false, ['independent'] = false},
-    _events = {}, txts = {}, config = {}
+    _events = {}, txts = {}, config = {}, asleep = S{}, name2id = {}
 }
 healer = T{}
 settings = {}
@@ -156,7 +156,6 @@ hb._events['render'] = windower.register_event('prerender', function()
         if hb.active and not (moving or acting) then
             --hb.active = false    --Quick stop when debugging
             if healer:action_delay_passed() then
-                healer.last_action = now                    --Refresh stored action check time
                 actions.take_action(player, partner, targ)
             end
         end
