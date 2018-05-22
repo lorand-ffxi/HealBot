@@ -11,6 +11,7 @@ local buffs = {
     ignored_debuffs = {},
     action_buff_map = lor_settings.load('data/action_buff_map.lua')
 }
+local lc_res = _libs.lor.resources.lc_res
 local ffxi = _libs.lor.ffxi
 
 --==============================================================================
